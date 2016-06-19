@@ -1,8 +1,10 @@
 package com.fzb.zrlog.plugin.backup.scheduler;
 
 import com.fzb.common.util.IOUtil;
+import com.fzb.common.util.RunConstants;
 import com.fzb.zrlog.plugin.backup.Start;
 import com.fzb.zrlog.plugin.common.PathKit;
+import com.fzb.zrlog.plugin.type.RunType;
 import org.apache.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -23,8 +25,8 @@ public class BackUpJob implements Job {
 
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
-        System.out.println("Job is run");
-        String execString = "";
+        LOGGER.info("Job is run");
+        String execString;
         File dbFile = new File(Start.filePath + new SimpleDateFormat("YYYYMMdd_HHmm").format(new Date()) + ".sql");
         try {
             if (!dbFile.getParentFile().exists()) {
@@ -35,29 +37,19 @@ public class BackUpJob implements Job {
             prop.load(new FileInputStream(new File(context.getJobDetail().getJobDataMap().get("dbProperties").toString())));
             URI uri = new URI(prop.getProperty("jdbcUrl").replace("jdbc:", ""));
             execString = "mysqldump -h" + uri.getHost() + "  -u" + prop.getProperty("user") + " -p" + prop.getProperty("password") + " --databases " + uri.getPath().replace("/", "");
+            if (RunConstants.runType == RunType.DEV) {
+                LOGGER.info(execString);
+            }
             Runtime runtime = Runtime.getRuntime();
 
-            try {
-                Process process = runtime.exec(execString);
-                process.waitFor();
-                byte[] bytes = IOUtil.getByteByInputStream(process.getInputStream());
-                LOGGER.info("file size " + bytes.length);
-                IOUtil.writeBytesToFile(bytes, dbFile);
-            } catch (IOException | InterruptedException var6) {
-                var6.printStackTrace();
-            }
+            Process process = runtime.exec(execString);
+            byte[] bytes = IOUtil.getByteByInputStream(process.getInputStream());
+            LOGGER.info("file size " + bytes.length);
+            IOUtil.writeBytesToFile(bytes, dbFile);
         } catch (IOException e) {
             LOGGER.error("unSupport mysqldump", e);
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
-        } finally {
-            System.out.println(execString);
-            /*try {
-                MailUtil.sendMail(ZrlogPublicQuery.getwebSiteMap().get("backupSqlFile_mail").toString(), "定时备份SQL文件", console, f);
-            } catch (Exception e) {
-                LOGGER.error("sendMail error", e);
-            }*/
-            // send file service
         }
     }
 }

@@ -3,13 +3,13 @@ package com.fzb.zrlog.plugin.backup.controller;
 import com.fzb.zrlog.plugin.IMsgPacketCallBack;
 import com.fzb.zrlog.plugin.IOSession;
 import com.fzb.zrlog.plugin.backup.Start;
-import com.fzb.zrlog.plugin.backup.util.FreeMarkerKit;
 import com.fzb.zrlog.plugin.common.IdUtil;
-import com.fzb.zrlog.plugin.data.codec.*;
-import com.fzb.zrlog.plugin.data.codec.convert.FileConvertMsgBody;
+import com.fzb.zrlog.plugin.data.codec.ContentType;
+import com.fzb.zrlog.plugin.data.codec.HttpRequestInfo;
+import com.fzb.zrlog.plugin.data.codec.MsgPacket;
+import com.fzb.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.fzb.zrlog.plugin.type.ActionType;
 import flexjson.JSONDeserializer;
-import freemarker.template.utility.CollectionUtils;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -55,7 +55,7 @@ public class BackupController {
                 if (map.get("cycle") == null) {
                     map.put("cycle", "3600");
                 }
-                session.sendMsg(ContentType.HTML, FreeMarkerKit.render(BackupController.class.getResourceAsStream("/templates/index.ftl"), map, session.getPlugin()), requestPacket.getMethodStr(), requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
+                session.responseHtml("/templates/index.ftl", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
             }
         });
 
@@ -89,7 +89,7 @@ public class BackupController {
             fileListMap.add(tMap);
         }
         map.put("files", fileListMap);
-        session.sendMsg(ContentType.HTML, FreeMarkerKit.render(BackupController.class.getResourceAsStream("/templates/filelist.ftl"), map, session.getPlugin()), requestPacket.getMethodStr(), requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
+        session.responseHtml("/templates/filelist.ftl", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
     }
 
     public void downfile() {
