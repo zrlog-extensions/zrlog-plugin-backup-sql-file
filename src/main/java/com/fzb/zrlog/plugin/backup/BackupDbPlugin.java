@@ -49,10 +49,10 @@ public class BackupDbPlugin implements IPluginAction {
                             backupJob.getJobDataMap().put("dbProperties", map.get("dbProperties"));
                             backupJob.getJobDataMap().put("cycle", cycle);
 
-                            String cron = "0 */" + cycle + " * * * ?";
+                            String cron = "0 0 */" + cycle + " * * ?";
                             //开发环境
                             if (RunConstants.runType == RunType.DEV) {
-                                cron = "*/" + cycle + " * * * * ?";
+                                cron = "0 */" + cycle + " * * * ?";
                             }
                             CronTrigger trigger = TriggerBuilder
                                     .newTrigger()

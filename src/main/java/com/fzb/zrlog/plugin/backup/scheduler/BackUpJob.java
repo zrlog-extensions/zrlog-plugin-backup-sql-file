@@ -3,7 +3,6 @@ package com.fzb.zrlog.plugin.backup.scheduler;
 import com.fzb.common.util.IOUtil;
 import com.fzb.common.util.RunConstants;
 import com.fzb.zrlog.plugin.backup.Start;
-import com.fzb.zrlog.plugin.common.PathKit;
 import com.fzb.zrlog.plugin.type.RunType;
 import org.apache.log4j.Logger;
 import org.quartz.Job;
@@ -27,7 +26,7 @@ public class BackUpJob implements Job {
             throws JobExecutionException {
         LOGGER.info("Job is run");
         String execString;
-        File dbFile = new File(Start.filePath + new SimpleDateFormat("YYYYMMdd_HHmm").format(new Date()) + ".sql");
+        File dbFile = new File(Start.filePath + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) + ".sql");
         try {
             if (!dbFile.getParentFile().exists()) {
                 dbFile.getParentFile().mkdirs();
@@ -48,8 +47,11 @@ public class BackUpJob implements Job {
             IOUtil.writeBytesToFile(bytes, dbFile);
         } catch (IOException e) {
             LOGGER.error("unSupport mysqldump", e);
+            dbFile.delete();
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
+        } catch (Exception e) {
+            LOGGER.error("", e);
         }
     }
 }
