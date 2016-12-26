@@ -26,16 +26,18 @@ public class BackUpJob implements Job {
             throws JobExecutionException {
         LOGGER.info("Job is run");
         String execString;
-        File dbFile = new File(Start.filePath + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) + ".sql");
+        File dbFile = null;
         try {
+            Properties prop = new Properties();
+            prop.load(new FileInputStream(new File(context.getJobDetail().getJobDataMap().get("dbProperties").toString())));
+            URI uri = new URI(prop.getProperty("jdbcUrl").replace("jdbc:", ""));
+            String dbName = uri.getPath().replace("/", "");
+            dbFile = new File(Start.filePath + dbName + "_" + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) + ".sql");
             if (!dbFile.getParentFile().exists()) {
                 dbFile.getParentFile().mkdirs();
             }
             dbFile.createNewFile();
-            Properties prop = new Properties();
-            prop.load(new FileInputStream(new File(context.getJobDetail().getJobDataMap().get("dbProperties").toString())));
-            URI uri = new URI(prop.getProperty("jdbcUrl").replace("jdbc:", ""));
-            execString = "mysqldump -h" + uri.getHost() + "  -u" + prop.getProperty("user") + " -p" + prop.getProperty("password") + " --databases " + uri.getPath().replace("/", "");
+            execString = "mysqldump -h" + uri.getHost() + "  -u" + prop.getProperty("user") + " -p" + prop.getProperty("password") + " --databases " + dbName;
             if (RunConstants.runType == RunType.DEV) {
                 LOGGER.info(execString);
             }
@@ -47,7 +49,9 @@ public class BackUpJob implements Job {
             IOUtil.writeBytesToFile(bytes, dbFile);
         } catch (IOException e) {
             LOGGER.error("unSupport mysqldump", e);
-            dbFile.delete();
+            if (dbFile != null) {
+                dbFile.delete();
+            }
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
         } catch (Exception e) {
