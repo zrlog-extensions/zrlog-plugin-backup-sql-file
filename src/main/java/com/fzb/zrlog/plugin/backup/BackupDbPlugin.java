@@ -50,7 +50,7 @@ public class BackupDbPlugin implements IPluginAction {
                             backupJob.getJobDataMap().put("cycle", cycle);
 
                             String cron = "0 0 */" + cycle + " * * ?";
-                            //开发环境
+                            //开发环境（每分钟执行一次）
                             if (RunConstants.runType == RunType.DEV) {
                                 cron = "0 */" + cycle + " * * * ?";
                             }
