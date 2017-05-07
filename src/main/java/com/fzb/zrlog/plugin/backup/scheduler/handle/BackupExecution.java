@@ -15,7 +15,7 @@ public class BackupExecution {
 
     private static final Logger LOGGER = Logger.getLogger(BackupExecution.class);
 
-    public byte[] getDumpFileBytes(String user, String host, String dbName, String password) throws Exception {
+    public byte[] getDumpFileBytes(String user, int port, String host, String dbName, String password) throws Exception {
         File binFile;
         if (testMysqlDumpInstalled()) {
             binFile = new File("mysqldump");
@@ -31,7 +31,8 @@ public class BackupExecution {
             }
         }
 
-        String execString = binFile.toString() + " -h" + host + "  -u" + user + " -p" + password + " --databases " + dbName;
+        String execString = binFile.toString() + " -h" + host + " -P=" + port + "  -u" + user +
+                " -p" + password + " --databases " + dbName;
         if (RunConstants.runType == RunType.DEV) {
             LOGGER.info(execString);
         }

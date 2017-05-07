@@ -33,7 +33,8 @@ public class BackupJob implements Job {
                 dbFile.getParentFile().mkdirs();
             }
             BackupExecution backupExecution = new BackupExecution();
-            byte[] dumpFileBytes = backupExecution.getDumpFileBytes(prop.getProperty("user"), uri.getHost(), dbName, prop.getProperty("password"));
+            byte[] dumpFileBytes = backupExecution.getDumpFileBytes(prop.getProperty("user"), uri.getPort(),
+                    uri.getHost(), dbName, prop.getProperty("password"));
             IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
