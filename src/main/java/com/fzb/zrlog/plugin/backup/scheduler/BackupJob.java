@@ -3,8 +3,6 @@ package com.fzb.zrlog.plugin.backup.scheduler;
 import com.fzb.common.util.IOUtil;
 import com.fzb.zrlog.plugin.backup.Start;
 import com.fzb.zrlog.plugin.backup.scheduler.handle.BackupExecution;
-import com.fzb.zrlog.plugin.backup.scheduler.handle.UnixBackupExecution;
-import com.fzb.zrlog.plugin.backup.scheduler.handle.WindowsBackupExecution;
 import org.apache.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -37,12 +35,7 @@ public class BackupJob implements Job {
                 dbFile.getParentFile().mkdirs();
             }
             dbFile.createNewFile();
-            BackupExecution backupExecution;
-            if ("/".equals(File.separator)) {
-                backupExecution = new UnixBackupExecution();
-            } else {
-                backupExecution = new WindowsBackupExecution();
-            }
+            BackupExecution backupExecution = new BackupExecution();
             byte[] dumpFileBytes = backupExecution.getDumpFileBytes(prop.getProperty("user"), uri.getHost(), dbName, prop.getProperty("password"));
             IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
         } catch (IOException e) {
