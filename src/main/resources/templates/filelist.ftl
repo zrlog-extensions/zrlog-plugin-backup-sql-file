@@ -11,7 +11,7 @@
         <h3>查看文件列表 (仅展示最近20条记录)</h3>
         <hr/>
         <#list files as file>
-            <div class="rows">
+            <div class="row">
                 <div class="col-xs-5">
                     <span><a href="downfile?file=${file.fileName}">${file.fileName}</a></span>
                 </div>
