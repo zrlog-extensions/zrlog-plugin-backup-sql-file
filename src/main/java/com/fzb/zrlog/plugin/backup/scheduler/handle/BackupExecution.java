@@ -31,7 +31,7 @@ public class BackupExecution {
             }
         }
 
-        String execString = binFile.toString() + " -h" + host + " -P=" + port + "  -u" + user +
+        String execString = binFile.toString() + " -h" + host + " -P" + port + "  -u" + user +
                 " -p" + password + " --databases " + dbName;
         if (RunConstants.runType == RunType.DEV) {
             LOGGER.info(execString);

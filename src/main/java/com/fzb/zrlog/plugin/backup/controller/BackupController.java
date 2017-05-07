@@ -51,7 +51,6 @@ public class BackupController {
             @Override
             public void handler(MsgPacket msgPacket) {
                 Map map = new JSONDeserializer<Map>().deserialize(msgPacket.getDataStr());
-                map.put("url", requestInfo.getUrl());
                 if (map.get("cycle") == null) {
                     map.put("cycle", "3600");
                 }
@@ -85,7 +84,7 @@ public class BackupController {
         for (File file : fileList) {
             Map<String, Object> tMap = new HashMap<>();
             tMap.put("fileName", file.getName());
-            tMap.put("lastModified", new SimpleDateFormat("YYYY-MM-dd HH:mm").format(new Date(file.lastModified())));
+            tMap.put("lastModified", new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(file.lastModified())));
             fileListMap.add(tMap);
         }
         map.put("files", fileListMap);
