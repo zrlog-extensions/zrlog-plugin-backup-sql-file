@@ -17,25 +17,47 @@ public class BackupExecution {
 
     public byte[] getDumpFileBytes(String user, String host, String dbName, String password) throws Exception {
         File binFile;
-        if ("/".equals(File.separator)) {
-            binFile = new File(Start.filePath + "/mysqldump");
+        if (testMysqlDumpInstalled()) {
+            binFile = new File("mysqldump");
         } else {
-            binFile = new File(Start.filePath + "/mysqldump.exe");
+            if ("/".equals(File.separator)) {
+                binFile = new File(Start.filePath + "/mysqldump");
+            } else {
+                binFile = new File(Start.filePath + "/mysqldump.exe");
+            }
+            copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + binFile.getName()), binFile);
+            if ("/".equals(File.separator)) {
+                Runtime.getRuntime().exec("chmod 777 " + binFile);
+            }
         }
-        copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + binFile.getName()), binFile);
+
         String execString = binFile.toString() + " -h" + host + "  -u" + user + " -p" + password + " --databases " + dbName;
         if (RunConstants.runType == RunType.DEV) {
             LOGGER.info(execString);
         }
-        if ("/".equals(File.separator)) {
-            Runtime.getRuntime().exec("chmod 777 " + binFile);
-        }
         Runtime runtime = Runtime.getRuntime();
-
         Process process = runtime.exec(execString);
         byte[] bytes = IOUtil.getByteByInputStream(process.getInputStream());
+        if (bytes.length == 0) {
+            bytes = IOUtil.getByteByInputStream(process.getErrorStream());
+            LOGGER.error("the system not support mysqldump cmd \n" + new String(bytes));
+        }
         process.destroy();
         return bytes;
+    }
+
+    private boolean testMysqlDumpInstalled() {
+        try {
+            Runtime runtime = Runtime.getRuntime();
+            Process process = runtime.exec("mysqldump");
+            process.destroy();
+            return true;
+        } catch (IOException e) {
+            if (RunConstants.runType == RunType.DEV) {
+                LOGGER.error("unSupport mysqldump", e);
+            }
+            return false;
+        }
     }
 
     private void copyInternalFileTo(InputStream inputStream, File file) {
@@ -65,7 +87,6 @@ public class BackupExecution {
             } catch (IOException e) {
                 LOGGER.error("stream error", e);
             }
-
         }
     }
 }
