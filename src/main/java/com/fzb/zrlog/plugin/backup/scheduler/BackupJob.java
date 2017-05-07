@@ -1,9 +1,10 @@
 package com.fzb.zrlog.plugin.backup.scheduler;
 
 import com.fzb.common.util.IOUtil;
-import com.fzb.common.util.RunConstants;
 import com.fzb.zrlog.plugin.backup.Start;
-import com.fzb.zrlog.plugin.type.RunType;
+import com.fzb.zrlog.plugin.backup.scheduler.handle.BackupExecution;
+import com.fzb.zrlog.plugin.backup.scheduler.handle.UnixBackupExecution;
+import com.fzb.zrlog.plugin.backup.scheduler.handle.WindowsBackupExecution;
 import org.apache.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -18,14 +19,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
 
-public class BackUpJob implements Job {
+public class BackupJob implements Job {
 
-    private static Logger LOGGER = Logger.getLogger(BackUpJob.class);
+    private static Logger LOGGER = Logger.getLogger(BackupJob.class);
 
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
         LOGGER.info("Job is run");
-        String execString;
         File dbFile = null;
         try {
             Properties prop = new Properties();
@@ -37,16 +37,14 @@ public class BackUpJob implements Job {
                 dbFile.getParentFile().mkdirs();
             }
             dbFile.createNewFile();
-            execString = "mysqldump -h" + uri.getHost() + "  -u" + prop.getProperty("user") + " -p" + prop.getProperty("password") + " --databases " + dbName;
-            if (RunConstants.runType == RunType.DEV) {
-                LOGGER.info(execString);
+            BackupExecution backupExecution;
+            if ("/".equals(File.separator)) {
+                backupExecution = new UnixBackupExecution();
+            } else {
+                backupExecution = new WindowsBackupExecution();
             }
-            Runtime runtime = Runtime.getRuntime();
-
-            Process process = runtime.exec(execString);
-            byte[] bytes = IOUtil.getByteByInputStream(process.getInputStream());
-            LOGGER.info("file size " + bytes.length);
-            IOUtil.writeBytesToFile(bytes, dbFile);
+            byte[] dumpFileBytes = backupExecution.getDumpFileBytes(prop.getProperty("user"), uri.getHost(), dbName, prop.getProperty("password"));
+            IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
         } catch (IOException e) {
             LOGGER.error("unSupport mysqldump", e);
             if (dbFile != null) {

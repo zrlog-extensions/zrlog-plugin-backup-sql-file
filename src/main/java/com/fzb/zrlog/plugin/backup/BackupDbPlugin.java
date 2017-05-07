@@ -5,7 +5,7 @@ import com.fzb.zrlog.plugin.IMsgPacketCallBack;
 import com.fzb.zrlog.plugin.IOSession;
 import com.fzb.zrlog.plugin.api.IPluginAction;
 import com.fzb.zrlog.plugin.backup.controller.BackupController;
-import com.fzb.zrlog.plugin.backup.scheduler.BackUpJob;
+import com.fzb.zrlog.plugin.backup.scheduler.BackupJob;
 import com.fzb.zrlog.plugin.common.IdUtil;
 import com.fzb.zrlog.plugin.data.codec.HttpRequestInfo;
 import com.fzb.zrlog.plugin.data.codec.MsgPacket;
@@ -43,7 +43,7 @@ public class BackupDbPlugin implements IPluginAction {
                         }
                         try {
                             scheduler = schedulerFactory.getScheduler();
-                            JobDetail backupJob = JobBuilder.newJob(BackUpJob.class)
+                            JobDetail backupJob = JobBuilder.newJob(BackupJob.class)
                                     .withIdentity("sql", "backup").build();
                             Map<String, Object> map = new JSONDeserializer<Map<String, Object>>().deserialize(response.getDataStr());
                             backupJob.getJobDataMap().put("dbProperties", map.get("dbProperties"));

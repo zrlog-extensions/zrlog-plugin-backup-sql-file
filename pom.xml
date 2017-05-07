@@ -58,6 +58,7 @@
                 <includes>
                     <include>**/*.properties</include>
                     <include>**/templates/**</include>
+                    <include>lib/**</include>
                 </includes>
             </resource>
         </resources>
