@@ -9,7 +9,7 @@ import com.fzb.zrlog.plugin.data.codec.HttpRequestInfo;
 import com.fzb.zrlog.plugin.data.codec.MsgPacket;
 import com.fzb.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.fzb.zrlog.plugin.type.ActionType;
-import flexjson.JSONDeserializer;
+import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -50,7 +50,7 @@ public class BackupController {
         session.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
             @Override
             public void handler(MsgPacket msgPacket) {
-                Map map = new JSONDeserializer<Map>().deserialize(msgPacket.getDataStr());
+                Map map = new Gson().fromJson(msgPacket.getDataStr(),Map.class);
                 if (map.get("cycle") == null) {
                     map.put("cycle", "3600");
                 }

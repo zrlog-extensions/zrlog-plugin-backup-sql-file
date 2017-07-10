@@ -12,7 +12,7 @@ import com.fzb.zrlog.plugin.data.codec.MsgPacket;
 import com.fzb.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.fzb.zrlog.plugin.type.ActionType;
 import com.fzb.zrlog.plugin.type.RunType;
-import flexjson.JSONDeserializer;
+import com.google.gson.Gson;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
@@ -36,7 +36,7 @@ public class BackupDbPlugin implements IPluginAction {
                 ioSession.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
                     @Override
                     public void handler(MsgPacket msgPacket) {
-                        Map cycleMap = new JSONDeserializer<Map>().deserialize(msgPacket.getDataStr());
+                        Map cycleMap = new Gson().fromJson(msgPacket.getDataStr(), Map.class);
                         int cycle = 1;
                         if (cycleMap.get("cycle") != null) {
                             cycle = Integer.parseInt(cycleMap.get("cycle").toString()) / 3600;
@@ -45,7 +45,8 @@ public class BackupDbPlugin implements IPluginAction {
                             scheduler = schedulerFactory.getScheduler();
                             JobDetail backupJob = JobBuilder.newJob(BackupJob.class)
                                     .withIdentity("sql", "backup").build();
-                            Map<String, Object> map = new JSONDeserializer<Map<String, Object>>().deserialize(response.getDataStr());
+
+                            Map<String, Object> map = new Gson().fromJson(response.getDataStr(), Map.class);
                             backupJob.getJobDataMap().put("dbProperties", map.get("dbProperties"));
                             backupJob.getJobDataMap().put("cycle", cycle);
 
