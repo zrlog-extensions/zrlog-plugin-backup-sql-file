@@ -8,18 +8,28 @@
 <body>
 <div class="main-container">
     <div class="col-xs-8">
-        <h3>查看文件列表 (仅展示最近20条记录)</h3>
+        <h3>查看文件列表 (仅保留最近${maxKeepSize}条记录)</h3>
         <hr/>
-        <#list files as file>
-            <div class="row">
-                <div class="col-xs-5">
-                    <span><a href="downfile?file=${file.fileName}">${file.fileName}</a></span>
-                </div>
-                <div class="col-xs-7">
-                    ${file.lastModified}
-                </div>
-            </div>
-        </#list>
+        <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">文件名</th>
+                <th scope="col">创建时间</th>
+                <th scope="col">文件大小</th>
+            </tr>
+            </thead>
+            <tbody>
+            <#list files as file>
+            <tr>
+                <th scope="row">${file.index}</th>
+                <td><a href="downfile?file=${file.fileName}">${file.fileName}</a></td>
+                <td>${file.lastModified}</td>
+                <td>${file.size}</td>
+            </tr>
+            </#list>
+            </tbody>
+        </table>
         <hr/>
     </div>
 </div>

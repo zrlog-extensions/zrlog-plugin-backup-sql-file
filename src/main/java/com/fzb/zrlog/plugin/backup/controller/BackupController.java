@@ -13,6 +13,7 @@ import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.io.File;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -50,7 +51,7 @@ public class BackupController {
         session.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
             @Override
             public void handler(MsgPacket msgPacket) {
-                Map map = new Gson().fromJson(msgPacket.getDataStr(),Map.class);
+                Map map = new Gson().fromJson(msgPacket.getDataStr(), Map.class);
                 if (map.get("cycle") == null) {
                     map.put("cycle", "3600");
                 }
@@ -77,18 +78,34 @@ public class BackupController {
         }
 
         Map map = new HashMap();
-        if (fileList.size() > 20) {
-            fileList = fileList.subList(0, 20);
-        }
         List<Map<String, Object>> fileListMap = new ArrayList<>();
         for (File file : fileList) {
             Map<String, Object> tMap = new HashMap<>();
             tMap.put("fileName", file.getName());
+            tMap.put("index", fileList.indexOf(file) + 1);
+            tMap.put("size", formatFileSize(file.length()));
             tMap.put("lastModified", new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(file.lastModified())));
             fileListMap.add(tMap);
         }
         map.put("files", fileListMap);
+        map.put("maxKeepSize", Start.maxBackupSqlFileCount);
         session.responseHtml("/templates/filelist.ftl", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
+    }
+
+    private static String formatFileSize(long fileS) {
+        DecimalFormat df = new DecimalFormat("#.00");
+        String fileSizeString;
+        if (fileS < 1024L) {
+            fileSizeString = df.format((double) fileS) + "B";
+        } else if (fileS < 1048576L) {
+            fileSizeString = df.format((double) fileS / 1024.0D) + "K";
+        } else if (fileS < 1073741824L) {
+            fileSizeString = df.format((double) fileS / 1048576.0D) + "M";
+        } else {
+            fileSizeString = df.format((double) fileS / 1.073741824E9D) + "G";
+        }
+
+        return fileSizeString;
     }
 
     public void downfile() {

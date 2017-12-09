@@ -1,9 +1,9 @@
 package com.fzb.zrlog.plugin.backup;
 
 
+import com.fzb.zrlog.plugin.backup.controller.BackupController;
 import com.fzb.zrlog.plugin.backup.handler.BackupConnectHandle;
 import com.fzb.zrlog.plugin.client.NioClient;
-import com.fzb.zrlog.plugin.backup.controller.BackupController;
 import com.fzb.zrlog.plugin.common.PathKit;
 import com.fzb.zrlog.plugin.render.FreeMarkerRenderHandler;
 
@@ -14,6 +14,7 @@ import java.util.List;
 public class Start {
 
     public static final String filePath = PathKit.getRootPath() + "/backupSql/";
+    public static final int maxBackupSqlFileCount = 20;
 
     /**
      * @param args

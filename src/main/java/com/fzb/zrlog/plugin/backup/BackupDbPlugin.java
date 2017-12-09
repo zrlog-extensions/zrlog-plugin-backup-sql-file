@@ -42,6 +42,7 @@ public class BackupDbPlugin implements IPluginAction {
                             cycle = Integer.parseInt(cycleMap.get("cycle").toString()) / 3600;
                         }
                         try {
+                            new BackupJob().clearFile();
                             scheduler = schedulerFactory.getScheduler();
                             JobDetail backupJob = JobBuilder.newJob(BackupJob.class)
                                     .withIdentity("sql", "backup").build();
@@ -49,11 +50,15 @@ public class BackupDbPlugin implements IPluginAction {
                             Map<String, Object> map = new Gson().fromJson(response.getDataStr(), Map.class);
                             backupJob.getJobDataMap().put("dbProperties", map.get("dbProperties"));
                             backupJob.getJobDataMap().put("cycle", cycle);
-
-                            String cron = "0 0 */" + cycle + " * * ?";
+                            String cron;
+                            if (cycle < 24) {
+                                cron = "0 0 */" + cycle + " * * ?";
+                            } else {
+                                cron = "0 0 0 */" + cycle / 24 + " * ?";
+                            }
                             //开发环境（每分钟执行一次）
                             if (RunConstants.runType == RunType.DEV) {
-                                cron = "0 */" + cycle + " * * * ?";
+                                cron = "0 */1 * * * ?";
                             }
                             CronTrigger trigger = TriggerBuilder
                                     .newTrigger()

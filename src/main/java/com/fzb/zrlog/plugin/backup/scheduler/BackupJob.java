@@ -13,8 +13,7 @@ import java.io.FileInputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Properties;
+import java.util.*;
 
 public class BackupJob implements Job {
 
@@ -23,6 +22,7 @@ public class BackupJob implements Job {
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
         LOGGER.info("Job is run");
+
         try {
             Properties prop = new Properties();
             prop.load(new FileInputStream(new File(context.getJobDetail().getJobDataMap().get("dbProperties").toString())));
@@ -40,6 +40,35 @@ public class BackupJob implements Job {
             LOGGER.error("jdbcUrl error", e);
         } catch (Exception e) {
             LOGGER.error("", e);
+        } finally {
+            clearFile();
+        }
+    }
+
+    public void clearFile() {
+        File dbPath = new File(Start.filePath);
+        if (dbPath.exists()) {
+            File[] files = dbPath.listFiles();
+            if (files != null) {
+                List<File> fileList = new ArrayList<>();
+                for (File file : files) {
+                    if (file.getName().endsWith(".sql")) {
+                        fileList.add(file);
+                    }
+                }
+                if (fileList.size() > Start.maxBackupSqlFileCount) {
+                    Collections.sort(fileList, new Comparator<File>() {
+                        @Override
+                        public int compare(File o1, File o2) {
+                            return Long.compare(o1.lastModified(), o2.lastModified());
+                        }
+                    });
+                    List<File> needRemoveFileList = fileList.subList(0, fileList.size() - Start.maxBackupSqlFileCount);
+                    for (File file : needRemoveFileList) {
+                        file.delete();
+                    }
+                }
+            }
         }
     }
 }
