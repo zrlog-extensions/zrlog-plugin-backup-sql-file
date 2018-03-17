@@ -1,8 +1,8 @@
-package com.fzb.zrlog.plugin.backup.scheduler;
+package com.zrlog.plugin.backup.scheduler;
 
-import com.fzb.common.util.IOUtil;
-import com.fzb.zrlog.plugin.backup.Start;
-import com.fzb.zrlog.plugin.backup.scheduler.handle.BackupExecution;
+import com.hibegin.common.util.IOUtil;
+import com.zrlog.plugin.backup.Start;
+import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
 import org.apache.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -21,21 +21,10 @@ public class BackupJob implements Job {
 
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
-        LOGGER.info("Job is run");
-
         try {
             Properties prop = new Properties();
             prop.load(new FileInputStream(new File(context.getJobDetail().getJobDataMap().get("dbProperties").toString())));
-            URI uri = new URI(prop.getProperty("jdbcUrl").replace("jdbc:", ""));
-            String dbName = uri.getPath().replace("/", "");
-            File dbFile = new File(Start.filePath + dbName + "_" + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) + ".sql");
-            if (!dbFile.getParentFile().exists()) {
-                dbFile.getParentFile().mkdirs();
-            }
-            BackupExecution backupExecution = new BackupExecution();
-            byte[] dumpFileBytes = backupExecution.getDumpFileBytes(prop.getProperty("user"), uri.getPort(),
-                    uri.getHost(), dbName, prop.getProperty("password"));
-            IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
+            backup(prop);
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
         } catch (Exception e) {
@@ -45,8 +34,22 @@ public class BackupJob implements Job {
         }
     }
 
-    public void clearFile() {
-        File dbPath = new File(Start.filePath);
+    public static File backup(Properties properties) throws Exception {
+        URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
+        String dbName = uri.getPath().replace("/", "");
+        File dbFile = new File(Start.sqlPath + dbName + "_" + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) + ".sql");
+        if (!dbFile.getParentFile().exists()) {
+            dbFile.getParentFile().mkdirs();
+        }
+        BackupExecution backupExecution = new BackupExecution();
+        byte[] dumpFileBytes = backupExecution.getDumpFileBytes(properties.getProperty("user"), uri.getPort(),
+                uri.getHost(), dbName, properties.getProperty("password"));
+        IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
+        return dbFile;
+    }
+
+    public static void clearFile() {
+        File dbPath = new File(Start.sqlPath);
         if (dbPath.exists()) {
             File[] files = dbPath.listFiles();
             if (files != null) {

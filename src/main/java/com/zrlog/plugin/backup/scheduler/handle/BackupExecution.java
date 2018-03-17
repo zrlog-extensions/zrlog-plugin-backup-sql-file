@@ -1,9 +1,9 @@
-package com.fzb.zrlog.plugin.backup.scheduler.handle;
+package com.zrlog.plugin.backup.scheduler.handle;
 
-import com.fzb.common.util.IOUtil;
-import com.fzb.common.util.RunConstants;
-import com.fzb.zrlog.plugin.backup.Start;
-import com.fzb.zrlog.plugin.type.RunType;
+import com.hibegin.common.util.IOUtil;
+import com.zrlog.plugin.RunConstants;
+import com.zrlog.plugin.common.PathKit;
+import com.zrlog.plugin.type.RunType;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -16,14 +16,17 @@ public class BackupExecution {
     private static final Logger LOGGER = Logger.getLogger(BackupExecution.class);
 
     public byte[] getDumpFileBytes(String user, int port, String host, String dbName, String password) throws Exception {
+        if (RunConstants.runType == RunType.DEV) {
+            LOGGER.info("dumpFile start");
+        }
         File binFile;
         if (testMysqlDumpInstalled()) {
             binFile = new File("mysqldump");
         } else {
             if ("/".equals(File.separator)) {
-                binFile = new File(Start.filePath + "/mysqldump");
+                binFile = new File(PathKit.getTmpPath() + "/mysqldump");
             } else {
-                binFile = new File(Start.filePath + "/mysqldump.exe");
+                binFile = new File(PathKit.getTmpPath() + "/mysqldump.exe");
             }
             copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + binFile.getName()), binFile);
             if ("/".equals(File.separator)) {

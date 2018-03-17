@@ -1,17 +1,17 @@
-package com.fzb.zrlog.plugin.backup;
+package com.zrlog.plugin.backup;
 
-import com.fzb.common.util.RunConstants;
-import com.fzb.zrlog.plugin.IMsgPacketCallBack;
-import com.fzb.zrlog.plugin.IOSession;
-import com.fzb.zrlog.plugin.api.IPluginAction;
-import com.fzb.zrlog.plugin.backup.controller.BackupController;
-import com.fzb.zrlog.plugin.backup.scheduler.BackupJob;
-import com.fzb.zrlog.plugin.common.IdUtil;
-import com.fzb.zrlog.plugin.data.codec.HttpRequestInfo;
-import com.fzb.zrlog.plugin.data.codec.MsgPacket;
-import com.fzb.zrlog.plugin.data.codec.MsgPacketStatus;
-import com.fzb.zrlog.plugin.type.ActionType;
-import com.fzb.zrlog.plugin.type.RunType;
+import com.zrlog.plugin.IMsgPacketCallBack;
+import com.zrlog.plugin.IOSession;
+import com.zrlog.plugin.RunConstants;
+import com.zrlog.plugin.api.IPluginAction;
+import com.zrlog.plugin.backup.controller.BackupController;
+import com.zrlog.plugin.backup.scheduler.BackupJob;
+import com.zrlog.plugin.common.IdUtil;
+import com.zrlog.plugin.data.codec.HttpRequestInfo;
+import com.zrlog.plugin.data.codec.MsgPacket;
+import com.zrlog.plugin.data.codec.MsgPacketStatus;
+import com.zrlog.plugin.type.ActionType;
+import com.zrlog.plugin.type.RunType;
 import com.google.gson.Gson;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
@@ -42,7 +42,7 @@ public class BackupDbPlugin implements IPluginAction {
                             cycle = Integer.parseInt(cycleMap.get("cycle").toString()) / 3600;
                         }
                         try {
-                            new BackupJob().clearFile();
+                            BackupJob.clearFile();
                             scheduler = schedulerFactory.getScheduler();
                             JobDetail backupJob = JobBuilder.newJob(BackupJob.class)
                                     .withIdentity("sql", "backup").build();

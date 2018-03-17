@@ -16,7 +16,13 @@
 <body>
 <div class="col-xs-8">
     <h3>${_plugin.desc}</h3>
-    <h4 class="text-right"><a href="filelist">查看历史备份文件</a></h4>
+    <div class="text-right">
+        <a href="exportSqlFile">
+            <button class="btn btn-default" type="button" id="emailServiceMsg">
+                <i class="icon-download-alt bigger-110"></i>&nbsp;导出SQL文件
+            </button>
+        </a>
+    </div>
     <hr/>
     <form id="ajaxemailServiceMsg" class="form-horizontal" role="form">
         <div class="form-group">
@@ -24,18 +30,25 @@
             <div class="col-sm-3">
                 <select class="form-control" name="cycle">
                     <option value="3600"
-                    <#if '3600'==cycle>selected="selected"</#if>
-                    >1小时</option>
+                            <#if '3600'==cycle>selected="selected"</#if>
+                    >1小时
+                    </option>
                     <option value="21600"
-                    <#if '21600'==cycle>selected="selected"</#if>
-                    >6小时</option>
+                            <#if '21600'==cycle>selected="selected"</#if>
+                    >6小时
+                    </option>
                     <option value="43200"
-                    <#if '43200'==cycle>selected="selected"</#if>
-                    >12小时</option>
+                            <#if '43200'==cycle>selected="selected"</#if>
+                    >12小时
+                    </option>
                     <option value="86400"
-                    <#if '86400'==cycle>selected="selected"</#if>
-                    >1天</option>
+                            <#if '86400'==cycle>selected="selected"</#if>
+                    >1天
+                    </option>
                 </select>
+            </div>
+            <div>
+                <h4><i class="icon-file bigger-110"></i>&nbsp;<a href="filelist">查看历史备份文件</a></h4>
             </div>
         </div>
         <hr/>

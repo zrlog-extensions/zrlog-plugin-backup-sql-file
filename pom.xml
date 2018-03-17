@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.fzb.zrlog.plugin</groupId>
+    <groupId>com.zrlog.plugin</groupId>
     <artifactId>backup-sql-file</artifactId>
-    <version>1.2.1</version>
+    <version>1.5.0</version>
 
     <properties>
         <outputDirectory>/home/xiaochun/zrlog-plugin/</outputDirectory>
@@ -14,14 +14,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.fzb.zrlog.plugin</groupId>
-            <artifactId>common</artifactId>
-            <version>1.2.5</version>
-        </dependency>
-        <dependency>
-            <artifactId>freemarker-render</artifactId>
-            <groupId>com.fzb.zrlog.plugin</groupId>
-            <version>1.0</version>
+            <artifactId>plugin-freemarker-render</artifactId>
+            <groupId>com.zrlog</groupId>
+            <version>1.3.0</version>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>
@@ -78,7 +73,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.fzb.zrlog.plugin.backup.Start</mainClass>
+                            <mainClass>com.zrlog.plugin.backup.Start</mainClass>
                         </manifest>
                     </archive>
                     <finalName>backup-sql-file</finalName>

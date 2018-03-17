@@ -1,18 +1,20 @@
-package com.fzb.zrlog.plugin.backup.controller;
+package com.zrlog.plugin.backup.controller;
 
-import com.fzb.zrlog.plugin.IMsgPacketCallBack;
-import com.fzb.zrlog.plugin.IOSession;
-import com.fzb.zrlog.plugin.backup.Start;
-import com.fzb.zrlog.plugin.common.IdUtil;
-import com.fzb.zrlog.plugin.data.codec.ContentType;
-import com.fzb.zrlog.plugin.data.codec.HttpRequestInfo;
-import com.fzb.zrlog.plugin.data.codec.MsgPacket;
-import com.fzb.zrlog.plugin.data.codec.MsgPacketStatus;
-import com.fzb.zrlog.plugin.type.ActionType;
+import com.zrlog.plugin.IMsgPacketCallBack;
+import com.zrlog.plugin.IOSession;
+import com.zrlog.plugin.backup.Start;
+import com.zrlog.plugin.backup.scheduler.BackupJob;
+import com.zrlog.plugin.common.IdUtil;
+import com.zrlog.plugin.data.codec.ContentType;
+import com.zrlog.plugin.data.codec.HttpRequestInfo;
+import com.zrlog.plugin.data.codec.MsgPacket;
+import com.zrlog.plugin.data.codec.MsgPacketStatus;
+import com.zrlog.plugin.type.ActionType;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -45,6 +47,29 @@ public class BackupController {
         });
     }
 
+    public void exportSqlFile() {
+        session.sendJsonMsg(new HashMap<>(), ActionType.GET_DB_PROPERTIES.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
+            @Override
+            public void handler(final MsgPacket response) {
+                Map<String, Object> map = new Gson().fromJson(response.getDataStr(), Map.class);
+                Properties properties = new Properties();
+                try {
+                    properties.load(new FileInputStream((String) map.get("dbProperties")));
+                    File file = BackupJob.backup(properties);
+                    if (file.exists()) {
+                        session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
+                    } else {
+                        session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_ERROR);
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("", e);
+                }
+
+            }
+        });
+
+    }
+
     public void index() {
         Map<String, Object> keyMap = new HashMap<>();
         keyMap.put("key", "cycle");
@@ -62,7 +87,7 @@ public class BackupController {
     }
 
     public void filelist() {
-        File[] files = new File(Start.filePath).listFiles();
+        File[] files = new File(Start.sqlPath).listFiles();
         List<File> fileList = new ArrayList<>();
         if (files != null && files.length > 0) {
             for (File file : files) {
@@ -109,7 +134,7 @@ public class BackupController {
     }
 
     public void downfile() {
-        File file = new File(Start.filePath + requestInfo.simpleParam().get("file"));
+        File file = new File(Start.sqlPath + requestInfo.simpleParam().get("file"));
         if (file.exists()) {
             session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
         } else {
