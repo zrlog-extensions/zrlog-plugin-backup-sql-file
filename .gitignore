@@ -15,3 +15,5 @@
 *.*~
 *.log
 backupSql/
+tmp/
+!.mvn/wrapper/maven-wrapper.jar

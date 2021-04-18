@@ -6,7 +6,6 @@ import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
 import org.apache.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,27 +16,14 @@ import java.util.*;
 
 public class BackupJob implements Job {
 
-    private static Logger LOGGER = Logger.getLogger(BackupJob.class);
-
-    public void execute(JobExecutionContext context)
-            throws JobExecutionException {
-        try {
-            Properties prop = new Properties();
-            prop.load(new FileInputStream(new File(context.getJobDetail().getJobDataMap().get("dbProperties").toString())));
-            backup(prop);
-        } catch (URISyntaxException e) {
-            LOGGER.error("jdbcUrl error", e);
-        } catch (Exception e) {
-            LOGGER.error("", e);
-        } finally {
-            clearFile();
-        }
-    }
+    private static final Logger LOGGER = Logger.getLogger(BackupJob.class);
 
     public static File backup(Properties properties) throws Exception {
         URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
         String dbName = uri.getPath().replace("/", "");
-        File dbFile = new File(Start.sqlPath + dbName + "_" + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) + ".sql");
+        File dbFile =
+                new File(Start.sqlPath + dbName + "_" + new SimpleDateFormat("yyyyMMdd_HHmm").format(new Date()) +
+                        ".sql");
         if (!dbFile.getParentFile().exists()) {
             dbFile.getParentFile().mkdirs();
         }
@@ -60,18 +46,28 @@ public class BackupJob implements Job {
                     }
                 }
                 if (fileList.size() > Start.maxBackupSqlFileCount) {
-                    Collections.sort(fileList, new Comparator<File>() {
-                        @Override
-                        public int compare(File o1, File o2) {
-                            return Long.compare(o1.lastModified(), o2.lastModified());
-                        }
-                    });
+                    fileList.sort(Comparator.comparingLong(File::lastModified));
                     List<File> needRemoveFileList = fileList.subList(0, fileList.size() - Start.maxBackupSqlFileCount);
                     for (File file : needRemoveFileList) {
                         file.delete();
                     }
                 }
             }
+        }
+    }
+
+    @Override
+    public void execute(JobExecutionContext context) {
+        try {
+            Properties prop = new Properties();
+            prop.load(new FileInputStream(context.getJobDetail().getJobDataMap().get("dbProperties").toString()));
+            backup(prop);
+        } catch (URISyntaxException e) {
+            LOGGER.error("jdbcUrl error", e);
+        } catch (Exception e) {
+            LOGGER.error("", e);
+        } finally {
+            clearFile();
         }
     }
 }

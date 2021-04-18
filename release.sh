@@ -1,0 +1,1 @@
+./mvnw -U clean compile assembly:single -DoutputDirectory=/var/lib/jenkins/download/plugin
