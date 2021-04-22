@@ -32,9 +32,9 @@ public class BackupJob implements Job {
         byte[] dumpFileBytes = backupExecution.getDumpFileBytes(properties.getProperty("user"), uri.getPort(),
                 uri.getHost(), dbName, properties.getProperty("password"));
         IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
-        Map<String, String[]> map = new HashMap<>();
-        map.put("fileInfo", new String[]{dbFile + "," + dbName + "/" + dbFile.getName()});
         try {
+            Map<String, String[]> map = new HashMap<>();
+            map.put("fileInfo", new String[]{dbFile + "," + dbName + "/" + dbFile.getName()});
             ioSession.requestService("uploadToPrivateService", map);
         } catch (Exception e) {
             LOGGER.info("uploadToPrivate error", e);
