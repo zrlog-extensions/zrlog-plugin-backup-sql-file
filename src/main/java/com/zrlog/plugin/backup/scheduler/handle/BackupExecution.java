@@ -25,7 +25,7 @@ public class BackupExecution {
             binFile = new File("mysqldump");
         } else {
             String path = System.getProperties().getProperty("os.arch") + "/" + System.getProperties().getProperty(
-                    "os.name").toLowerCase() + "/mysqldump";
+                    "os.name").toLowerCase().replace(" ", "") + "/mysqldump";
             binFile = new File(PathKit.getTmpPath() + "/" + path);
             LOGGER.info("Temp file " + path);
             copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + path), binFile);
