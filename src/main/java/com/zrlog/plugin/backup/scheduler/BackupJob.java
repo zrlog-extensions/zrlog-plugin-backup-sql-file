@@ -33,7 +33,7 @@ public class BackupJob implements Job {
                 uri.getHost(), dbName, properties.getProperty("password"));
         IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
         Map<String, String[]> map = new HashMap<>();
-        map.put("fileInfo", new String[]{dbFile + "," + uri});
+        map.put("fileInfo", new String[]{dbFile + "," + dbName + "/" + dbFile.getName()});
         try {
             ioSession.requestService("uploadToPrivateService", map);
         } catch (Exception e) {
