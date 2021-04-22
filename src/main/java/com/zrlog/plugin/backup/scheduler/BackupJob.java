@@ -1,6 +1,7 @@
 package com.zrlog.plugin.backup.scheduler;
 
 import com.hibegin.common.util.IOUtil;
+import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Start;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
 import org.apache.log4j.Logger;
@@ -18,7 +19,7 @@ public class BackupJob implements Job {
 
     private static final Logger LOGGER = Logger.getLogger(BackupJob.class);
 
-    public static File backup(Properties properties) throws Exception {
+    public static File backupThenStoreToPrivateStore(IOSession ioSession, Properties properties) throws Exception {
         URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
         String dbName = uri.getPath().replace("/", "");
         File dbFile =
@@ -31,6 +32,13 @@ public class BackupJob implements Job {
         byte[] dumpFileBytes = backupExecution.getDumpFileBytes(properties.getProperty("user"), uri.getPort(),
                 uri.getHost(), dbName, properties.getProperty("password"));
         IOUtil.writeBytesToFile(dumpFileBytes, dbFile);
+        Map<String, String[]> map = new HashMap<>();
+        map.put("fileInfo", new String[]{dbFile + "," + uri});
+        try {
+            ioSession.requestService("uploadToPrivateService", map);
+        } catch (Exception e) {
+            LOGGER.info("uploadToPrivate error", e);
+        }
         return dbFile;
     }
 
@@ -61,7 +69,9 @@ public class BackupJob implements Job {
         try {
             Properties prop = new Properties();
             prop.load(new FileInputStream(context.getJobDetail().getJobDataMap().get("dbProperties").toString()));
-            backup(prop);
+            IOSession ioSession = (IOSession) context.getJobDetail().getJobDataMap().get("ioSession");
+            File file = backupThenStoreToPrivateStore(ioSession, prop);
+
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
         } catch (Exception e) {

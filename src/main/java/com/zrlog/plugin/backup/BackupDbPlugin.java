@@ -1,5 +1,6 @@
 package com.zrlog.plugin.backup;
 
+import com.google.gson.Gson;
 import com.zrlog.plugin.IMsgPacketCallBack;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.RunConstants;
@@ -12,7 +13,6 @@ import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.zrlog.plugin.type.ActionType;
 import com.zrlog.plugin.type.RunType;
-import com.google.gson.Gson;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
@@ -49,6 +49,7 @@ public class BackupDbPlugin implements IPluginAction {
 
                             Map<String, Object> map = new Gson().fromJson(response.getDataStr(), Map.class);
                             backupJob.getJobDataMap().put("dbProperties", map.get("dbProperties"));
+                            backupJob.getJobDataMap().put("ioSession", ioSession);
                             backupJob.getJobDataMap().put("cycle", cycle);
                             String cron;
                             if (cycle < 24) {

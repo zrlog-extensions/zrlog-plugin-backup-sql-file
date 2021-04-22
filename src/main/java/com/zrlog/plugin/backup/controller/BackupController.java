@@ -1,5 +1,6 @@
 package com.zrlog.plugin.backup.controller;
 
+import com.google.gson.Gson;
 import com.zrlog.plugin.IMsgPacketCallBack;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Start;
@@ -10,7 +11,6 @@ import com.zrlog.plugin.data.codec.HttpRequestInfo;
 import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.zrlog.plugin.type.ActionType;
-import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -36,6 +36,22 @@ public class BackupController {
         this.requestInfo = requestInfo;
     }
 
+    private static String formatFileSize(long fileS) {
+        DecimalFormat df = new DecimalFormat("#.00");
+        String fileSizeString;
+        if (fileS < 1024L) {
+            fileSizeString = df.format((double) fileS) + "B";
+        } else if (fileS < 1048576L) {
+            fileSizeString = df.format((double) fileS / 1024.0D) + "K";
+        } else if (fileS < 1073741824L) {
+            fileSizeString = df.format((double) fileS / 1048576.0D) + "M";
+        } else {
+            fileSizeString = df.format((double) fileS / 1.073741824E9D) + "G";
+        }
+
+        return fileSizeString;
+    }
+
     public void update() {
         session.sendMsg(new MsgPacket(requestInfo.simpleParam(), ContentType.JSON, MsgPacketStatus.SEND_REQUEST, IdUtil.getInt(), ActionType.SET_WEBSITE.name()), new IMsgPacketCallBack() {
             @Override
@@ -55,7 +71,7 @@ public class BackupController {
                 Properties properties = new Properties();
                 try {
                     properties.load(new FileInputStream((String) map.get("dbProperties")));
-                    File file = BackupJob.backup(properties);
+                    File file = BackupJob.backupThenStoreToPrivateStore(session, properties);
                     if (file.exists()) {
                         session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
                     } else {
@@ -115,22 +131,6 @@ public class BackupController {
         map.put("files", fileListMap);
         map.put("maxKeepSize", Start.maxBackupSqlFileCount);
         session.responseHtml("/templates/filelist.ftl", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
-    }
-
-    private static String formatFileSize(long fileS) {
-        DecimalFormat df = new DecimalFormat("#.00");
-        String fileSizeString;
-        if (fileS < 1024L) {
-            fileSizeString = df.format((double) fileS) + "B";
-        } else if (fileS < 1048576L) {
-            fileSizeString = df.format((double) fileS / 1024.0D) + "K";
-        } else if (fileS < 1073741824L) {
-            fileSizeString = df.format((double) fileS / 1048576.0D) + "M";
-        } else {
-            fileSizeString = df.format((double) fileS / 1.073741824E9D) + "G";
-        }
-
-        return fileSizeString;
     }
 
     public void downfile() {
