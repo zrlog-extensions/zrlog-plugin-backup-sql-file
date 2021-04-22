@@ -70,8 +70,7 @@ public class BackupJob implements Job {
             Properties prop = new Properties();
             prop.load(new FileInputStream(context.getJobDetail().getJobDataMap().get("dbProperties").toString()));
             IOSession ioSession = (IOSession) context.getJobDetail().getJobDataMap().get("ioSession");
-            File file = backupThenStoreToPrivateStore(ioSession, prop);
-
+            backupThenStoreToPrivateStore(ioSession, prop);
         } catch (URISyntaxException e) {
             LOGGER.error("jdbcUrl error", e);
         } catch (Exception e) {
