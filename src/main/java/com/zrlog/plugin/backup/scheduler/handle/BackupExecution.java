@@ -27,7 +27,7 @@ public class BackupExecution {
             String path = System.getProperties().getProperty("os.arch") + "/" + System.getProperties().getProperty(
                     "os.name").toLowerCase().replace(" ", "") + "/mysqldump";
             binFile = new File(PathKit.getTmpPath() + "/" + path);
-            LOGGER.info("Temp file " + path);
+            LOGGER.info("Temp file " + binFile + ", path " + path);
             copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + path), binFile);
             //unix 设置执行权限
             if ("/".equals(File.separator)) {
@@ -55,6 +55,9 @@ public class BackupExecution {
     }
 
     private static void copyInternalFileTo(InputStream inputStream, File file) {
+        if (inputStream == null) {
+            return;
+        }
         byte[] tempByte = new byte[1024];
         try {
             int length;
