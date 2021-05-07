@@ -94,7 +94,7 @@ public class BackupExecution {
         }
 
         String execString =
-                getBinFile().toString() + " -h" + host + " -P" + port + "  -u" + user + " -p" + password + " " +
+                getBinFile().toString() + " -f -h" + host + " -P" + port + "  -u" + user + " -p" + password + " " +
                         "--databases " + dbName;
         if (RunConstants.runType == RunType.DEV) {
             LOGGER.info(execString);
