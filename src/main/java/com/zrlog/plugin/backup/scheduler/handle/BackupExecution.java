@@ -1,19 +1,21 @@
 package com.zrlog.plugin.backup.scheduler.handle;
 
-import com.hibegin.common.util.IOUtil;
 import com.zrlog.plugin.RunConstants;
+import com.zrlog.plugin.backup.util.AESCrypto;
+import com.zrlog.plugin.common.IOUtil;
+import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.PathKit;
 import com.zrlog.plugin.type.RunType;
-import org.apache.log4j.Logger;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BackupExecution {
 
-    private static final Logger LOGGER = Logger.getLogger(BackupExecution.class);
+    private static final Logger LOGGER = LoggerUtil.getLogger(BackupExecution.class);
 
     public static void main(String[] args) throws IOException {
         System.out.println(getBinFile());
@@ -24,14 +26,23 @@ public class BackupExecution {
         if (testMysqlDumpInstalled()) {
             binFile = new File("mysqldump");
         } else {
-            String path = System.getProperties().getProperty("os.arch") + "/" + System.getProperties().getProperty(
+            String path = System.getProperties().getProperty("os.arch").replace("amd64", "x86_64") + "/" + System.getProperties().getProperty(
                     "os.name").toLowerCase().replace(" ", "") + "/mysqldump";
             binFile = new File(PathKit.getTmpPath() + "/" + path);
-            LOGGER.info("Temp file " + binFile + ", path " + path);
+            if (RunConstants.runType == RunType.DEV) {
+                LOGGER.info("Temp file " + binFile + ", path " + path);
+            }
             copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + path), binFile);
             //unix 设置执行权限
-            if ("/".equals(File.separator)) {
-                Runtime.getRuntime().exec("chmod 777 " + binFile);
+            if (path.contains("windows")) {
+                return binFile;
+            }
+            Process process = Runtime.getRuntime().exec("chmod 777 " + binFile);
+            try {
+                process.waitFor();
+                process.destroy();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
         return binFile;
@@ -48,7 +59,7 @@ public class BackupExecution {
             return true;
         } catch (IOException e) {
             if (RunConstants.runType == RunType.DEV) {
-                LOGGER.error("unSupport mysqldump", e);
+                LOGGER.log(Level.SEVERE, "UnSupport mysqldump", e);
             }
             return false;
         }
@@ -61,52 +72,59 @@ public class BackupExecution {
         byte[] tempByte = new byte[1024];
         try {
             int length;
-            FileOutputStream fileOutputStream = null;
-            try {
-                file.getParentFile().mkdirs();
-                fileOutputStream = new FileOutputStream(file);
+            file.getParentFile().mkdirs();
+            try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
                 while ((length = inputStream.read(tempByte)) != -1) {
                     fileOutputStream.write(tempByte, 0, length);
                 }
             } catch (IOException e) {
-                LOGGER.error("stream error", e);
-            } finally {
-                if (fileOutputStream != null) {
-                    try {
-                        fileOutputStream.close();
-                    } catch (IOException e) {
-                        LOGGER.error("stream error", e);
-                    }
-                }
+                LOGGER.log(Level.SEVERE, "stream error", e);
             }
         } finally {
             try {
                 inputStream.close();
             } catch (IOException e) {
-                LOGGER.error("stream error", e);
+                LOGGER.log(Level.SEVERE, "stream error", e);
             }
         }
     }
 
-    public byte[] getDumpFileBytes(String user, int port, String host, String dbName, String password) throws Exception {
-        if (RunConstants.runType == RunType.DEV) {
-            LOGGER.info("dumpFile start");
-        }
+    public File dumpToFile(String user, int port, String host, String dbName, String password, String backupPassword) throws Exception {
+        new File(PathKit.getTmpPath()).mkdirs();
+        File file = File.createTempFile("temp", ".sql", new File(PathKit.getTmpPath()));
+        try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+            if (RunConstants.runType == RunType.DEV) {
+                LOGGER.info("DumpFile start");
+            }
 
-        String execString =
-                getBinFile().toString() + " -f -h" + host + " -P" + port + "  -u" + user + " -p" + password + " " +
-                        "--databases " + dbName;
-        if (RunConstants.runType == RunType.DEV) {
-            LOGGER.info(execString);
+            String execString = getBinFile() + " -f -h" + host + " -P" + port + "  -u" + user + " -p" + password + " " +
+                    "--databases " + dbName;
+            if (RunConstants.runType == RunType.DEV) {
+                LOGGER.info(execString);
+            }
+            Runtime runtime = Runtime.getRuntime();
+            Process process = runtime.exec(execString);
+            InputStreamReader inputStreamReader = new InputStreamReader(process.getInputStream(), Charset.defaultCharset());
+            try (BufferedReader b = new BufferedReader(inputStreamReader)) {
+                String line;
+                while ((line = b.readLine()) != null) {
+                    if (line.startsWith("-- Dump completed on")) {
+                        continue;
+                    }
+                    fileOutputStream.write(line.getBytes());
+                    fileOutputStream.write("\n".getBytes());
+                }
+            }
+            process.destroy();
         }
-        Runtime runtime = Runtime.getRuntime();
-        Process process = runtime.exec(execString);
-        byte[] bytes = IOUtil.getByteByInputStream(process.getInputStream());
-        if (bytes.length == 0) {
-            bytes = IOUtil.getByteByInputStream(process.getErrorStream());
-            LOGGER.error("the system not support mysqldump cmd \n" + new String(bytes));
+        if (Objects.isNull(backupPassword) || backupPassword.trim().isEmpty()) {
+            return file;
         }
-        process.destroy();
-        return bytes;
+        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            byte[] bytes = new AESCrypto(backupPassword).encrypt(IOUtil.getByteByInputStream(fileInputStream));
+            File newFile = new File(file + ".encrypted");
+            IOUtil.writeBytesToFile(bytes, newFile);
+            return newFile;
+        }
     }
 }

@@ -15,3 +15,6 @@
 backupSql/
 tmp/
 !.mvn/wrapper/maven-wrapper.jar
+backup-sql-file.bgv
+sql
+log/
