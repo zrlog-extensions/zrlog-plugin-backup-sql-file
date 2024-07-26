@@ -18,3 +18,4 @@ tmp/
 backup-sql-file.bgv
 sql
 log/
+.DS_Store

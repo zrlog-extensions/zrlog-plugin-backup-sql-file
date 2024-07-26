@@ -124,6 +124,7 @@ public class BackupExecution {
             byte[] bytes = new AESCrypto(backupPassword).encrypt(IOUtil.getByteByInputStream(fileInputStream));
             File newFile = new File(file + ".encrypted");
             IOUtil.writeBytesToFile(bytes, newFile);
+            file.delete();
             return newFile;
         }
     }

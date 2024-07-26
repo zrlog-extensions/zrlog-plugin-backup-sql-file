@@ -37,6 +37,12 @@ public class BackupJob implements Runnable {
             properties.load(fileInputStream);
             URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
             String dbName = uri.getPath().replace("/", "");
+
+
+
+            BackupExecution backupExecution = new BackupExecution();
+            File dumpFile = backupExecution.dumpToFile(properties.getProperty("user"), uri.getPort(), uri.getHost(), dbName, properties.getProperty("password"), backupPassword);
+            String newFileMd5 = SecurityUtils.md5ByFile(dumpFile);
             StringJoiner sj = new StringJoiner("_");
             sj.add(dbName);
             sj.add(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
@@ -45,16 +51,16 @@ public class BackupJob implements Runnable {
             if (!dbFile.getParentFile().exists()) {
                 dbFile.getParentFile().mkdirs();
             }
-            BackupExecution backupExecution = new BackupExecution();
-            File dumpFile = backupExecution.dumpToFile(properties.getProperty("user"), uri.getPort(), uri.getHost(), dbName, properties.getProperty("password"), backupPassword);
-            String newFileMd5 = SecurityUtils.md5ByFile(dumpFile);
             for (File file : dbFile.getParentFile().listFiles()) {
-                if (Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
+                if (isSqlFile(file) && Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
                     dumpFile.delete();
                     return new BackupResultVO(file, false);
                 }
             }
-            dumpFile.renameTo(dbFile);
+            System.out.println("dbFile = " + dbFile);
+            System.out.println("dumpFile = " + dumpFile);
+            boolean success = dumpFile.renameTo(dbFile);
+            System.out.println("success = " + success);
             return new BackupResultVO(dbFile, true);
         } catch (IOException e) {
             throw new RuntimeException(e);
