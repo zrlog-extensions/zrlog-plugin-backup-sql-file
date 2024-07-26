@@ -3,6 +3,7 @@ package com.zrlog.plugin.backup.scheduler;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
+import com.zrlog.plugin.common.FileUtils;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.SecurityUtils;
 import com.zrlog.plugin.data.codec.ContentType;
@@ -55,8 +56,8 @@ public class BackupJob implements Runnable {
                     return new BackupResultVO(file, false, dbName);
                 }
             }
-            System.out.println("dbFile = " + dbFile);
-            System.out.println("dumpFile = " + dumpFile);
+            System.out.println("dbFile = " + dbFile.exists());
+            System.out.println("dumpFile = " + dumpFile.exists());
             boolean success = dumpFile.renameTo(dbFile);
             System.out.println("success = " + success);
             return new BackupResultVO(dbFile, true, dbName);
