@@ -14,6 +14,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Level;
@@ -52,14 +54,10 @@ public class BackupJob implements Runnable {
             for (File file : dbFile.getParentFile().listFiles()) {
                 if (isSqlFile(file) && Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
                     dumpFile.delete();
-                    System.out.println("file hit = " + file);
                     return new BackupResultVO(file, false, dbName);
                 }
             }
-            System.out.println("dbFile = " + dbFile.exists());
-            System.out.println("dumpFile = " + dumpFile.exists());
-            boolean success = dumpFile.renameTo(dbFile);
-            System.out.println("success = " + success);
+            Files.move(dumpFile.toPath(), dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             return new BackupResultVO(dbFile, true, dbName);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -130,5 +128,9 @@ public class BackupJob implements Runnable {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "", e);
         }
+    }
+
+    public static void main(String[] args) throws IOException {
+        File.createTempFile("test", "tt").renameTo(new File("/tmp/1"));
     }
 }
