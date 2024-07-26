@@ -57,28 +57,25 @@ public class BackupController {
             Map<String, Object> map = new HashMap<>();
             map.put("success", true);
             session.sendMsg(new MsgPacket(map, ContentType.JSON, MsgPacketStatus.RESPONSE_SUCCESS, requestPacket.getMsgId(), requestPacket.getMethodStr()));
+            Application.backupConnectHandle.refresh(session);
         });
     }
 
     public void exportSqlFile() {
-        session.sendJsonMsg(new HashMap<>(), ActionType.GET_DB_PROPERTIES.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, response -> {
-            Map<String, Object> map = new Gson().fromJson(response.getDataStr(), Map.class);
-            try {
-                File file = new BackupJob(session, (String) map.get("dbProperties")).backup(Application.sqlPath, null).file();
-                if (file.exists()) {
-                    try {
-                        session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
-                    } finally {
-                        file.delete();
-                    }
-                } else {
-                    session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_ERROR);
+        try {
+            File file = new BackupJob(session).backup(Application.sqlPath, null).file();
+            if (file.exists()) {
+                try {
+                    session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
+                } finally {
+                    file.delete();
                 }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "", e);
+            } else {
+                session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_ERROR);
             }
-        });
-
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "", e);
+        }
     }
 
     public void index() {

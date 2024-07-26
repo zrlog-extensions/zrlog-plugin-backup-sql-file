@@ -13,33 +13,36 @@ import com.zrlog.plugin.type.ActionType;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class BackupConnectHandle implements IConnectHandler {
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService scheduler;
 
     @Override
     public void handler(IOSession ioSession, MsgPacket msgPacket) {
-        ioSession.sendJsonMsg(new HashMap<>(), ActionType.GET_DB_PROPERTIES.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
+        refresh(ioSession);
+    }
+
+    public void refresh(IOSession ioSession) {
+        if (Objects.nonNull(scheduler)) {
+            scheduler.shutdown();
+        }
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        Map<String, Object> keyMap = new HashMap<>();
+        keyMap.put("key", "cycle");
+        ioSession.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
             @Override
-            public void handler(final MsgPacket response) {
-                Map<String, Object> keyMap = new HashMap<>();
-                keyMap.put("key", "cycle");
-                ioSession.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, new IMsgPacketCallBack() {
-                    @Override
-                    public void handler(MsgPacket msgPacket) {
-                        Map cycleMap = new Gson().fromJson(msgPacket.getDataStr(), Map.class);
-                        int cycle = 3600;
-                        if (cycleMap.get("cycle") != null) {
-                            cycle = Integer.parseInt(cycleMap.get("cycle").toString());
-                        }
-                        Map<String, Object> map = new Gson().fromJson(response.getDataStr(), Map.class);
-                        scheduler.scheduleAtFixedRate(new BackupJob(ioSession, (String) map.get("dbProperties")), 0, cycle, TimeUnit.SECONDS);
-                    }
-                });
+            public void handler(MsgPacket msgPacket) {
+                Map cycleMap = new Gson().fromJson(msgPacket.getDataStr(), Map.class);
+                int cycle = 3600;
+                if (cycleMap.get("cycle") != null) {
+                    cycle = Integer.parseInt(cycleMap.get("cycle").toString());
+                }
+                scheduler.scheduleAtFixedRate(new BackupJob(ioSession), 0, cycle, TimeUnit.SECONDS);
             }
         });
     }

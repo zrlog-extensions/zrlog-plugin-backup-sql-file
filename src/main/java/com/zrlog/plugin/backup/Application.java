@@ -15,6 +15,7 @@ public class Application {
 
     public static final String sqlPath = PathKit.getRootPath() + "/sql/";
     public static final int maxBackupSqlFileCount = 20;
+    public static BackupConnectHandle backupConnectHandle = new BackupConnectHandle();
 
     /**
      * @param args
@@ -22,7 +23,7 @@ public class Application {
     public static void main(String[] args) throws IOException {
         List<Class> classList = new ArrayList<>();
         classList.add(BackupController.class);
-        new NioClient(new BackupConnectHandle(), new FreeMarkerRenderHandler()).connectServer(args, classList, BackupDbPlugin.class);
+        new NioClient(backupConnectHandle, new FreeMarkerRenderHandler()).connectServer(args, classList, BackupDbPlugin.class);
     }
 }
 

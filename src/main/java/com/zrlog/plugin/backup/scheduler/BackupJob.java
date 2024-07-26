@@ -1,11 +1,14 @@
 package com.zrlog.plugin.backup.scheduler;
 
+import com.zrlog.plugin.IMsgPacketCallBack;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
+import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.SecurityUtils;
 import com.zrlog.plugin.data.codec.ContentType;
+import com.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.zrlog.plugin.type.ActionType;
 
 import java.io.File;
@@ -23,12 +26,11 @@ public class BackupJob implements Runnable {
     private static final Logger LOGGER = LoggerUtil.getLogger(BackupJob.class);
 
     private final IOSession ioSession;
-    private final String propFile;
+    private String propFile;
     private String backupPath;
 
-    public BackupJob(IOSession ioSession, String propFile) {
+    public BackupJob(IOSession ioSession) {
         this.ioSession = ioSession;
-        this.propFile = propFile;
     }
 
     public BackupResultVO backup(String backupFilePath, String backupPassword) throws Exception {
@@ -37,7 +39,6 @@ public class BackupJob implements Runnable {
             properties.load(fileInputStream);
             URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
             String dbName = uri.getPath().replace("/", "");
-
 
 
             BackupExecution backupExecution = new BackupExecution();
@@ -123,6 +124,8 @@ public class BackupJob implements Runnable {
     @Override
     public void run() {
         try {
+            Map responseSync = ioSession.getResponseSync(ContentType.JSON, new HashMap<>(), ActionType.GET_DB_PROPERTIES, Map.class);
+            this.propFile = (String) responseSync.get("dbProperties");
             Map<String, String> map = new HashMap<>();
             map.put("key", "backupPassword,backupFilePath");
             Map<String, String> responseMap = ioSession.getResponseSync(ContentType.JSON, map, ActionType.GET_WEBSITE, Map.class);
