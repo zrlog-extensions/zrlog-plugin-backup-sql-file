@@ -54,6 +54,7 @@ public class BackupJob implements Runnable {
             for (File file : dbFile.getParentFile().listFiles()) {
                 if (isSqlFile(file) && Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
                     dumpFile.delete();
+                    System.out.println("file hit = " + file);
                     return new BackupResultVO(file, false);
                 }
             }
