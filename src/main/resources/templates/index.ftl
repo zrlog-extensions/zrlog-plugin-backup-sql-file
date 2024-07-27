@@ -48,6 +48,10 @@
         <div style="display: flex;align-items: center;gap: 24px">
             <label class="" style="text-align:end; width: 80px;margin-bottom: 0"> 备份周期 </label>
             <select class="form-control" name="cycle" style="max-width: 180px">
+                <option value="60"
+                        <#if '60'==cycle>selected="selected"</#if>
+                >1分钟(不推荐)
+                </option>
                 <option value="3600"
                         <#if '3600'==cycle>selected="selected"</#if>
                 >1小时

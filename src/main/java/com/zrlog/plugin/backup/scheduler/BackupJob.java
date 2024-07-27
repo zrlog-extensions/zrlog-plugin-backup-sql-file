@@ -3,7 +3,8 @@ package com.zrlog.plugin.backup.scheduler;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
-import com.zrlog.plugin.common.FileUtils;
+import com.zrlog.plugin.backup.util.AESCrypto;
+import com.zrlog.plugin.common.IOUtil;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.SecurityUtils;
 import com.zrlog.plugin.data.codec.ContentType;
@@ -41,8 +42,9 @@ public class BackupJob implements Runnable {
 
 
             BackupExecution backupExecution = new BackupExecution();
-            File dumpFile = backupExecution.dumpToFile(properties.getProperty("user"), uri.getPort(), uri.getHost(), dbName, properties.getProperty("password"), backupPassword);
-            String newFileMd5 = SecurityUtils.md5ByFile(dumpFile);
+            BackupFileInfo backupFileInfo = backupExecution.dumpToFile(properties.getProperty("user"), uri.getPort(), uri.getHost(), dbName, properties.getProperty("password"), backupPassword);
+            String newFileMd5 = backupFileInfo.sourceFileMd5();
+            File dumpFile = backupFileInfo.resultFile();
             StringJoiner sj = new StringJoiner("_");
             sj.add(dbName);
             sj.add(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
@@ -52,7 +54,21 @@ public class BackupJob implements Runnable {
                 dbFile.getParentFile().mkdirs();
             }
             for (File file : dbFile.getParentFile().listFiles()) {
-                if (isSqlFile(file) && Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
+                if (!isSqlFile(file)) {
+                    continue;
+                }
+                if (isSqlEncryptedFile(file)) {
+                    try {
+                        String resource = SecurityUtils.md5(new AESCrypto(backupPassword).decrypt(IOUtil.getByteByInputStream(new FileInputStream(file))));
+                        if (Objects.equals(resource, newFileMd5)) {
+                            dumpFile.delete();
+                            return new BackupResultVO(file, false, dbName);
+                        }
+                    } catch (Exception e) {
+                        //ignore
+                    }
+                }
+                if (Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
                     dumpFile.delete();
                     return new BackupResultVO(file, false, dbName);
                 }
@@ -82,7 +98,11 @@ public class BackupJob implements Runnable {
     }
 
     public static boolean isSqlFile(File file) {
-        return file.getName().endsWith(".sql") || file.getName().endsWith(".encrypted");
+        return file.getName().endsWith(".sql") || isSqlEncryptedFile(file);
+    }
+
+    public static boolean isSqlEncryptedFile(File file) {
+        return file.getName().endsWith(".sql.encrypted");
     }
 
     private void clearFile(String backupPath) {

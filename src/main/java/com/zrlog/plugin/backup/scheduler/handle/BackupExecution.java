@@ -1,10 +1,12 @@
 package com.zrlog.plugin.backup.scheduler.handle;
 
 import com.zrlog.plugin.RunConstants;
+import com.zrlog.plugin.backup.scheduler.BackupFileInfo;
 import com.zrlog.plugin.backup.util.AESCrypto;
 import com.zrlog.plugin.common.IOUtil;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.PathKit;
+import com.zrlog.plugin.common.SecurityUtils;
 import com.zrlog.plugin.type.RunType;
 
 import java.io.*;
@@ -89,7 +91,7 @@ public class BackupExecution {
         }
     }
 
-    public File dumpToFile(String user, int port, String host, String dbName, String password, String backupPassword) throws Exception {
+    public BackupFileInfo dumpToFile(String user, int port, String host, String dbName, String password, String backupPassword) throws Exception {
         new File(PathKit.getTmpPath()).mkdirs();
         File file = File.createTempFile("temp", ".sql", new File(PathKit.getTmpPath()));
         try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
@@ -117,15 +119,16 @@ public class BackupExecution {
             }
             process.destroy();
         }
+        String md5 = SecurityUtils.md5ByFile(file);
         if (Objects.isNull(backupPassword) || backupPassword.trim().isEmpty()) {
-            return file;
+            return new BackupFileInfo(file, md5);
         }
         try (FileInputStream fileInputStream = new FileInputStream(file)) {
             byte[] bytes = new AESCrypto(backupPassword).encrypt(IOUtil.getByteByInputStream(fileInputStream));
             File newFile = new File(file + ".encrypted");
             IOUtil.writeBytesToFile(bytes, newFile);
             file.delete();
-            return newFile;
+            return new BackupFileInfo(newFile, md5);
         }
     }
 }
