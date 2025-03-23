@@ -26,8 +26,7 @@ jobs:
 
       - name: Build and upload binary
         run: |
-          rm -rf src/main/resources/lib/aarch64/*
-          rm -rf src/main/resources/lib/x86_64/windows/*
-          rm -rf src/main/resources/lib/x86_64/macosx/*
+          rm -rf src/main/resources/lib/x86_64/*
+          rm -rf src/main/resources/lib/aarch64/macosx/*
           bash -e bin/package-native-github.sh
           bash -e bin/upload-bin.sh ${{ secrets.SECRET_ID }} ${{ secrets.SECRET_KEY }} ${{ secrets.BUCKET }} /tmp/download plugin
