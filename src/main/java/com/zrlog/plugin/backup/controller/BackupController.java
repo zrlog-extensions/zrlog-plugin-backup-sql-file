@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
+import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.data.codec.ContentType;
@@ -131,7 +132,7 @@ public class BackupController {
     }
 
     public void downfile() {
-        File file = new File(getBackupFilePath() + "/" + requestInfo.simpleParam().get("file"));
+        File file = FileUtils.safeAppendFilePath(getBackupFilePath(), (String) requestInfo.simpleParam().get("file"));
         if (BackupJob.isSqlFile(file) && file.exists()) {
             session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
         } else {

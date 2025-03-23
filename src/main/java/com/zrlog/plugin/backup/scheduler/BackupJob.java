@@ -32,6 +32,16 @@ public class BackupJob implements Runnable {
         this.ioSession = ioSession;
     }
 
+
+    private String buildSqlFileName(String dbName, String backupPassword) {
+        StringJoiner sj = new StringJoiner("_");
+        sj.add(dbName);
+        sj.add(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
+        sj.add(UUID.randomUUID().toString().replace("-", ""));
+        return sj + ".sql" + (Objects.nonNull(backupPassword) && !backupPassword.trim().isEmpty() ? ".encrypted" : "");
+    }
+
+
     public BackupResultVO backup(String backupFilePath, String backupPassword) throws Exception {
         Map responseSync = ioSession.getResponseSync(ContentType.JSON, new HashMap<>(), ActionType.GET_DB_PROPERTIES, Map.class);
         try (FileInputStream fileInputStream = new FileInputStream((String) responseSync.get("dbProperties"))) {
@@ -39,40 +49,38 @@ public class BackupJob implements Runnable {
             properties.load(fileInputStream);
             URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
             String dbName = uri.getPath().replace("/", "");
-
-
             BackupExecution backupExecution = new BackupExecution();
             BackupFileInfo backupFileInfo = backupExecution.dumpToFile(properties.getProperty("user"), uri.getPort(), uri.getHost(), dbName, properties.getProperty("password"), backupPassword);
             String newFileMd5 = backupFileInfo.sourceFileMd5();
             File dumpFile = backupFileInfo.resultFile();
-            StringJoiner sj = new StringJoiner("_");
-            sj.add(dbName);
-            sj.add(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
-            sj.add(UUID.randomUUID().toString().replace("-", ""));
-            File dbFile = new File(backupFilePath + "/" + sj + ".sql" + (Objects.nonNull(backupPassword) && !backupPassword.trim().isEmpty() ? ".encrypted" : ""));
+            File dbFile = new File(backupFilePath + "/" + buildSqlFileName(dbName, backupPassword));
             if (!dbFile.getParentFile().exists()) {
                 dbFile.getParentFile().mkdirs();
             }
-            for (File file : dbFile.getParentFile().listFiles()) {
-                if (!isSqlFile(file)) {
-                    continue;
-                }
-                if (isSqlEncryptedFile(file)) {
-                    try {
-                        String resource = SecurityUtils.md5(new AESCrypto(backupPassword).decrypt(IOUtil.getByteByInputStream(new FileInputStream(file))));
-                        if (Objects.equals(resource, newFileMd5)) {
-                            dumpFile.delete();
-                            return new BackupResultVO(file, false, dbName);
+            File[] subFiles = dbFile.getParentFile().listFiles();
+            if (Objects.nonNull(subFiles)) {
+                for (File file : subFiles) {
+                    if (!isSqlFile(file)) {
+                        continue;
+                    }
+                    if (isSqlEncryptedFile(file)) {
+                        try {
+                            String resource = SecurityUtils.md5(new AESCrypto(backupPassword).decrypt(IOUtil.getByteByInputStream(new FileInputStream(file))));
+                            if (Objects.equals(resource, newFileMd5)) {
+                                dumpFile.delete();
+                                return new BackupResultVO(file, false, dbName);
+                            }
+                        } catch (Exception e) {
+                            //ignore
                         }
-                    } catch (Exception e) {
-                        //ignore
+                    }
+                    if (Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
+                        dumpFile.delete();
+                        return new BackupResultVO(file, false, dbName);
                     }
                 }
-                if (Objects.equals(newFileMd5, SecurityUtils.md5ByFile(file))) {
-                    dumpFile.delete();
-                    return new BackupResultVO(file, false, dbName);
-                }
             }
+            //to final file
             Files.move(dumpFile.toPath(), dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             return new BackupResultVO(dbFile, true, dbName);
         } catch (IOException e) {
