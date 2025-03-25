@@ -1,11 +1,11 @@
-name: build on Linux arm64 preview native
+name: build on Linux arm64 release native
 on:
   push:
     branches:
       - main
 jobs:
   build:
-    name: ZrLog on ${{ matrix.os }} ${{ matrix.architecture }}
+    name: Plugin on ${{ matrix.os }} ${{ matrix.architecture }}
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -26,7 +26,5 @@ jobs:
 
       - name: Build and upload binary
         run: |
-          rm -rf src/main/resources/lib/x86_64/*
-          rm -rf src/main/resources/lib/aarch64/macosx/*
-          bash -e bin/package-native-github.sh
+          bash -e bin/package-native-github.sh /tmp/download/plugin
           bash -e bin/upload-bin.sh ${{ secrets.SECRET_ID }} ${{ secrets.SECRET_KEY }} ${{ secrets.BUCKET }} /tmp/download plugin
