@@ -27,7 +27,7 @@ public class GraalvmAgentApplication {
         Map<String, Object> objectObjectHashMap = new HashMap<>();
         objectObjectHashMap.put("cycle", "3600");
         objectObjectHashMap.put("theme", "light");
-        new FreeMarkerRenderHandler().render("/templates/index.ftl", plugin, objectObjectHashMap);
+        new FreeMarkerRenderHandler().render("/templates/index", plugin, objectObjectHashMap);
         PluginNativeImageUtils.exposeController(Collections.singletonList(BackupController.class));
         Application.main(args);
 

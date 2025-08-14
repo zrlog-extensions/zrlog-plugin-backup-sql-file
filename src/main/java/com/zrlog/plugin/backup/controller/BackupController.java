@@ -87,7 +87,7 @@ public class BackupController {
             map.putIfAbsent("cycle", "3600");
             map.putIfAbsent("backupPassword", "");
             map.put("theme", Objects.equals(requestInfo.getHeader().get("Dark-Mode"), "true") ? "dark" : "light");
-            session.responseHtml("/templates/index.ftl", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
+            session.responseHtml("/templates/index", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
         });
 
     }
@@ -117,7 +117,7 @@ public class BackupController {
         map.put("files", fileListMap);
         map.put("maxKeepSize", Application.maxBackupSqlFileCount);
         map.put("theme", Objects.equals(requestInfo.getHeader().get("Dark-Mode"), "true") ? "dark" : "light");
-        session.responseHtml("/templates/files.ftl", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
+        session.responseHtml("/templates/files", map, requestPacket.getMethodStr(), requestPacket.getMsgId());
     }
 
     private String getBackupFilePath() {
