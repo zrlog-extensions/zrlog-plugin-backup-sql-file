@@ -64,7 +64,7 @@ public class BackupController {
 
     public void exportSqlFile() {
         try {
-            File file = new BackupJob(session).backup(Application.sqlPath, null).file();
+            File file = new BackupJob(session).backup(Application.sqlPath, null).getFile();
             if (file.exists()) {
                 try {
                     session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);

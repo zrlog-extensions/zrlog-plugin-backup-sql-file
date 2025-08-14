@@ -16,13 +16,16 @@
         <native.maven.plugin.version>0.10.2</native.maven.plugin.version>
         <native.image.mainClass>com.zrlog.plugin.backup.Application</native.image.mainClass>
         <native.image.agentMainClass>com.zrlog.plugin.backup.GraalvmAgentApplication</native.image.agentMainClass>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <java.version>11</java.version>
     </properties>
 
     <dependencies>
         <dependency>
             <artifactId>zrlog-plugin-freemarker-render</artifactId>
             <groupId>com.hibegin</groupId>
-            <version>3.0.31</version>
+            <version>3.2.11</version>
         </dependency>
     </dependencies>
 
@@ -75,11 +78,12 @@
 
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <version>3.13.0</version>
                 <configuration>
                     <encoding>UTF-8</encoding>
-                    <source>21</source>
-                    <target>21</target>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                 </configuration>
             </plugin>
             <plugin>

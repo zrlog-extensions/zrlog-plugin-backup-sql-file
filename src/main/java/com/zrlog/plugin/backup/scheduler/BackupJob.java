@@ -51,8 +51,8 @@ public class BackupJob implements Runnable {
             String dbName = uri.getPath().replace("/", "");
             BackupExecution backupExecution = new BackupExecution();
             BackupFileInfo backupFileInfo = backupExecution.dumpToFile(properties.getProperty("user"), uri.getPort(), uri.getHost(), dbName, properties.getProperty("password"), backupPassword);
-            String newFileMd5 = backupFileInfo.sourceFileMd5();
-            File dumpFile = backupFileInfo.resultFile();
+            String newFileMd5 = backupFileInfo.getSourceFileMd5();
+            File dumpFile = backupFileInfo.getResultFile();
             File dbFile = new File(backupFilePath + "/" + buildSqlFileName(dbName, backupPassword));
             if (!dbFile.getParentFile().exists()) {
                 dbFile.getParentFile().mkdirs();
@@ -93,12 +93,12 @@ public class BackupJob implements Runnable {
 
     private void backupThenStoreToPrivateStore(String backupFilePath, String backupPassword) throws Exception {
         BackupResultVO resultVO = backup(backupFilePath, backupPassword);
-        if (!resultVO.newFile()) {
+        if (!resultVO.isNewFile()) {
             return;
         }
         try {
             Map<String, String[]> map = new HashMap<>();
-            map.put("fileInfo", new String[]{resultVO.file() + "," + resultVO.dbName() + "/" + resultVO.file().getName()});
+            map.put("fileInfo", new String[]{resultVO.getFile() + "," + resultVO.getDbName() + "/" + resultVO.getFile().getName()});
             ioSession.requestService("uploadToPrivateService", map);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "UploadToPrivate error", e);
