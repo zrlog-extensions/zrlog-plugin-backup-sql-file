@@ -19,7 +19,7 @@ public class GraalvmAgentApplication {
     public static void main(String[] args) throws IOException {
         PluginNativeImageUtils.usedGsonObject();
         String fileArch = NativeUtils.getRealFileArch();
-        if (Objects.equals(fileArch, "Windows_")) {
+        if (Objects.equals(fileArch, "Windows-x86_64")) {
             GraalvmAgentApplication.class.getResourceAsStream("/lib/Windows-x86_64/msvcp120.dll");
         }
         GraalvmAgentApplication.class.getResourceAsStream("/lib/" + fileArch + "/mysqldump");
