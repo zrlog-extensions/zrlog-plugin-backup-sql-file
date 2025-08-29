@@ -1,6 +1,7 @@
 package com.zrlog.plugin.backup;
 
 import com.zrlog.plugin.backup.controller.BackupController;
+import com.zrlog.plugin.backup.util.NativeUtils;
 import com.zrlog.plugin.common.PluginNativeImageUtils;
 import com.zrlog.plugin.message.Plugin;
 import com.zrlog.plugin.render.FreeMarkerRenderHandler;
@@ -10,14 +11,20 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class GraalvmAgentApplication {
 
 
     public static void main(String[] args) throws IOException {
         PluginNativeImageUtils.usedGsonObject();
-        String basePath = System.getProperty("user.dir").replace("\\target","").replace("/target", "");
-        File file = new File(basePath + "/src/main/resources");
+        String fileArch = NativeUtils.getRealFileArch();
+        if (Objects.equals(fileArch, "Windows_")) {
+            GraalvmAgentApplication.class.getResourceAsStream("/lib/Windows-x86_64/msvcp120.dll");
+        }
+        GraalvmAgentApplication.class.getResourceAsStream("/lib/" + fileArch + "/mysqldump");
+        String basePath = System.getProperty("user.dir").replace("\\target", "").replace("/target", "");
+        File file = new File(basePath + "/src/main/resources/templates");
         PluginNativeImageUtils.doLoopResourceLoad(file.listFiles(), file.getPath() + "/", "/");
         //Application.nativeAgent = true;
         Plugin plugin = new Plugin();

@@ -3,6 +3,7 @@ package com.zrlog.plugin.backup.scheduler.handle;
 import com.zrlog.plugin.RunConstants;
 import com.zrlog.plugin.backup.scheduler.BackupFileInfo;
 import com.zrlog.plugin.backup.util.AESCrypto;
+import com.zrlog.plugin.backup.util.NativeUtils;
 import com.zrlog.plugin.common.IOUtil;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.PathKit;
@@ -28,15 +29,14 @@ public class BackupExecution {
         if (testMysqlDumpInstalled()) {
             binFile = new File("mysqldump");
         } else {
-            String path = System.getProperties().getProperty("os.arch").replace("amd64", "x86_64") + "/" + System.getProperties().getProperty(
-                    "os.name").toLowerCase().replace(" ", "") + "/mysqldump";
+            String path = NativeUtils.getRealFileArch() + "/mysqldump";
             binFile = new File(PathKit.getTmpPath() + "/" + path);
             if (RunConstants.runType == RunType.DEV) {
                 LOGGER.info("Temp file " + binFile + ", path " + path);
             }
             copyInternalFileTo(BackupExecution.class.getResourceAsStream("/lib/" + path), binFile);
             //unix 设置执行权限
-            if (path.contains("windows")) {
+            if (path.contains("Windows")) {
                 return binFile;
             }
             Process process = Runtime.getRuntime().exec("chmod 777 " + binFile);
