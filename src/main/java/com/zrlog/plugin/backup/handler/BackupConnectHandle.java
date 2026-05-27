@@ -4,9 +4,9 @@ import com.google.gson.Gson;
 import com.zrlog.plugin.IMsgPacketCallBack;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.api.IConnectHandler;
-import com.zrlog.plugin.backup.BackupDbPlugin;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
 import com.zrlog.plugin.common.IdUtil;
+import com.zrlog.plugin.common.PluginEnvKit;
 import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.zrlog.plugin.type.ActionType;
@@ -24,6 +24,9 @@ public class BackupConnectHandle implements IConnectHandler {
 
     @Override
     public void handler(IOSession ioSession, MsgPacket msgPacket) {
+        if (PluginEnvKit.isLambda()) {
+            return;
+        }
         refresh(ioSession);
     }
 
