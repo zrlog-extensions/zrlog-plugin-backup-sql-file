@@ -24,8 +24,8 @@ public class GraalvmAgentApplication {
         }
         GraalvmAgentApplication.class.getResourceAsStream("/lib/" + fileArch + "/mysqldump");
         String basePath = System.getProperty("user.dir").replace("\\target", "").replace("/target", "");
-        File file = new File(basePath + "/src/main/resources/templates");
-        PluginNativeImageUtils.doLoopResourceLoad(file.listFiles(), file.getPath() + "/", "/");
+        File file = new File(basePath + "/src/main/resources");
+        PluginNativeImageUtils.doLoopResourceLoad(file.listFiles(), file.getPath() + "/templates", "/templates");
         //Application.nativeAgent = true;
         Plugin plugin = new Plugin();
         plugin.setName("test");

@@ -21,7 +21,7 @@ public class Application {
      * @param args
      */
     public static void main(String[] args) throws IOException {
-        List<Class> classList = new ArrayList<>();
+        List<Class<?>> classList = new ArrayList<>();
         classList.add(BackupController.class);
         new NioClient(backupConnectHandle, new FreeMarkerRenderHandler()).connectServer(args, classList, BackupDbPlugin.class);
     }
