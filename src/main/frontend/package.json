@@ -1,0 +1,40 @@
+{
+  "name": "zrlog-plugin-backup-sql-file-frontend",
+  "version": "1.0.0",
+  "homepage": ".",
+  "private": true,
+  "dependencies": {
+    "@ant-design/cssinjs": "1.11.1",
+    "@ant-design/icons": "5.3.6",
+    "antd": "6.4.3",
+    "axios": "1.6.7",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "BUILD_PATH=../resources/templates react-scripts build && mv ../resources/templates/index.html ../resources/templates/index.ftl",
+    "test": "react-scripts test"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "react-scripts": "5.0.1",
+    "typescript": "5.8.3"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

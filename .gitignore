@@ -19,3 +19,7 @@ backup-sql-file.bgv
 sql
 log/
 .DS_Store
+
+# Frontend & Auto-Build ignores
+/src/main/resources/templates/
+/src/main/frontend/node_modules/

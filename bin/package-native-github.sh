@@ -5,9 +5,9 @@ echo "real target folder ${basePath}"
 
 java -version
 sh bin/build-info.sh
-./mvnw ${2} clean package
-./mvnw ${2} -Pnative -Dagent exec:exec@java-agent -U
-./mvnw ${2} -Pnative package
+./mvnw ${2} clean package -PnodeBuild
+./mvnw ${2} -Pnative -Dagent exec:exec@java-agent -U -PnodeBuild
+./mvnw ${2} -Pnative package -PnodeBuild
 binName="backup-sql-file"
 targetFile=""
 sourceFile=""

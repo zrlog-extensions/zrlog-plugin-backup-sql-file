@@ -1,6 +1,7 @@
 package com.zrlog.plugin.backup.scheduler;
 
 import com.zrlog.plugin.IOSession;
+import com.google.gson.Gson;
 import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
 import com.zrlog.plugin.backup.util.AESCrypto;
@@ -140,21 +141,78 @@ public class BackupJob implements Runnable {
         }
     }
 
+    public synchronized void recordBackupHistory(boolean success, int count, String msg) {
+        try {
+            Map<String, String> getMap = new HashMap<>();
+            getMap.put("key", "syncHistory");
+            Map responseMap = ioSession.getResponseSync(ContentType.JSON, getMap, ActionType.GET_WEBSITE, Map.class);
+            String syncHistoryJson = responseMap != null ? (String) responseMap.get("syncHistory") : null;
+
+            List<Map<String, Object>> historyList = null;
+            if (syncHistoryJson != null && !syncHistoryJson.trim().isEmpty()) {
+                try {
+                    historyList = new Gson().fromJson(syncHistoryJson, List.class);
+                } catch (Exception e) {
+                    historyList = new ArrayList<>();
+                }
+            }
+            if (historyList == null) {
+                historyList = new ArrayList<>();
+            }
+
+            Map<String, Object> newLog = new HashMap<>();
+            newLog.put("time", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+            newLog.put("success", success);
+            newLog.put("filesCount", count);
+            newLog.put("message", msg);
+
+            historyList.add(0, newLog);
+
+            while (historyList.size() > 15) {
+                historyList.remove(historyList.size() - 1);
+            }
+
+            String newJson = new Gson().toJson(historyList);
+            Map<String, Object> setMap = new HashMap<>();
+            setMap.put("syncHistory", newJson);
+            ioSession.getResponseSync(ContentType.JSON, setMap, ActionType.SET_WEBSITE, Map.class);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to record backup history", e);
+        }
+    }
+
     @Override
     public void run() {
+        String backupFilePath = Application.sqlPath;
         try {
             Map<String, String> map = new HashMap<>();
             map.put("key", "backupPassword,backupFilePath");
             Map<String, String> responseMap = ioSession.getResponseSync(ContentType.JSON, map, ActionType.GET_WEBSITE, Map.class);
-            String backupFilePath = responseMap.get("backupFilePath");
+            if (responseMap != null && responseMap.get("backupFilePath") != null) {
+                backupFilePath = responseMap.get("backupFilePath");
+            }
             if (Objects.isNull(backupFilePath) || backupFilePath.isEmpty()) {
                 backupFilePath = Application.sqlPath;
             }
-            backupThenStoreToPrivateStore(backupFilePath, responseMap.get("backupPassword"));
+            backupThenStoreToPrivateStore(backupFilePath, responseMap != null ? responseMap.get("backupPassword") : null);
+
+            // Count files
+            File[] files = new File(backupFilePath).listFiles();
+            int count = 0;
+            if (files != null) {
+                for (File f : files) {
+                    if (f.isFile() && isSqlFile(f)) {
+                        count++;
+                    }
+                }
+            }
+            recordBackupHistory(true, count, "Scheduled backup completed successfully");
         } catch (URISyntaxException e) {
             LOGGER.log(Level.SEVERE, "jdbcUrl error", e);
+            recordBackupHistory(false, 0, "jdbcUrl error: " + e.getMessage());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "", e);
+            recordBackupHistory(false, 0, "Backup error: " + e.getMessage());
         }
     }
 
