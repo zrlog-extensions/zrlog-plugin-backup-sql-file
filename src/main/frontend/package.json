@@ -13,8 +13,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "BUILD_PATH=../resources/templates react-scripts build && mv ../resources/templates/index.html ../resources/templates/index.ftl",
-    "test": "react-scripts test"
+    "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "test": "react-scripts test",
+    "type-check": "tsc --noEmit"
   },
   "eslintConfig": {
     "extends": "react-app"

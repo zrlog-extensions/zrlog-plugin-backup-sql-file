@@ -150,7 +150,11 @@ public class BackupController {
 
                 try {
                     BackupJob backupJob = new BackupJob(session);
-                    backupJob.backup(backupFilePath, backupPassword);
+                    com.zrlog.plugin.backup.scheduler.BackupResultVO resultVO = backupJob.backup(backupFilePath, backupPassword);
+                    File file = resultVO.getFile();
+                    if (file == null || !file.exists() || file.length() == 0) {
+                        throw new RuntimeException("备份文件未生成或文件大小为0");
+                    }
 
                     File[] files = new File(backupFilePath).listFiles();
                     int count = 0;

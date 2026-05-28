@@ -94,6 +94,10 @@ public class BackupJob implements Runnable {
 
     private void backupThenStoreToPrivateStore(String backupFilePath, String backupPassword) throws Exception {
         BackupResultVO resultVO = backup(backupFilePath, backupPassword);
+        File file = resultVO.getFile();
+        if (file == null || !file.exists() || file.length() == 0) {
+            throw new RuntimeException("Backup file not generated or size is 0");
+        }
         if (!resultVO.isNewFile()) {
             return;
         }
