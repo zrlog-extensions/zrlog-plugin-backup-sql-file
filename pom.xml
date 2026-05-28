@@ -201,7 +201,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <nodeVersion>v16.15.1</nodeVersion>
+                            <nodeVersion>v20.10.0</nodeVersion>
                             <yarnVersion>v1.22.18</yarnVersion>
                             <npmVersion>8.11.0</npmVersion>
                             <workingDirectory>src/main/frontend</workingDirectory>

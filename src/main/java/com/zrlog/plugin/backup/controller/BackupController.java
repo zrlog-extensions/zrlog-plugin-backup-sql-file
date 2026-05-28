@@ -264,7 +264,12 @@ public class BackupController {
         // Load public info (theme, primary color)
         PublicInfo publicInfo = publicInfo();
         boolean dark = publicInfo.getDarkMode() == null ? isDarkMode() : publicInfo.getDarkMode();
-        String colorPrimary = notBlank(publicInfo.getAdminColorPrimary()) ? publicInfo.getAdminColorPrimary() : "#1677ff";
+        String colorPrimary = "#1677ff";
+        if (requestInfo.getHeader() != null && notBlank(requestInfo.getHeader().get("Admin-Color-Primary"))) {
+            colorPrimary = requestInfo.getHeader().get("Admin-Color-Primary");
+        } else if (publicInfo != null && notBlank(publicInfo.getAdminColorPrimary())) {
+            colorPrimary = publicInfo.getAdminColorPrimary();
+        }
 
         Map<String, Object> data = new HashMap<>();
         data.put("dark", dark);
