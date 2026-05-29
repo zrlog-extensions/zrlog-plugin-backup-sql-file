@@ -79,7 +79,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       setSettingsLoading(true);
 
       const params = new URLSearchParams();
-      params.append("cycle", values.cycle);
+      params.append("backupCron", values.backupCron);
       params.append("backupPassword", values.backupPassword || "");
       params.append("backupFilePath", values.backupFilePath || "");
 
@@ -222,15 +222,18 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
     }
   ];
 
-  const getCycleLabel = (value: string) => {
-    switch (value) {
-      case "60": return "1 分钟 (测试用)";
-      case "3600": return "1 小时";
-      case "21600": return "6 小时";
-      case "43200": return "12 小时";
-      case "86400": return "1 天 (标准周期)";
-      default: return `${parseInt(value) / 3600} 小时`;
-    }
+  const backupCronOptions = [
+    { value: "*/1 * * * *", label: "每分钟（测试）" },
+    { value: "*/5 * * * *", label: "每 5 分钟（测试）" },
+    { value: "0 * * * *", label: "每小时" },
+    { value: "0 */6 * * *", label: "每 6 小时" },
+    { value: "0 */12 * * *", label: "每 12 小时" },
+    { value: "0 2 * * *", label: "每天 02:00" },
+  ];
+
+  const getCronLabel = (value: string) => {
+    const option = backupCronOptions.find(item => item.value === value);
+    return option ? option.label : value;
   };
 
   return (
@@ -266,7 +269,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           <Button icon={<ReloadOutlined/>} onClick={() => refreshPage(false)} loading={loading}>刷新</Button>
           <Button icon={<SettingOutlined/>} onClick={() => {
             form.setFieldsValue({
-              cycle: data.config.cycle,
+              backupCron: data.config.backupCron,
               backupPassword: data.config.backupPassword,
               backupFilePath: data.config.backupFilePath
             });
@@ -293,10 +296,13 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             }}
             styles={{ body: { padding: 16 } }}
           >
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>定时周期</Typography.Text>
-            <div style={{ fontSize: 20, fontWeight: 600, color: token.colorPrimary, marginTop: 4 }}>
-              {getCycleLabel(data.config.cycle)}
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>调度周期</Typography.Text>
+            <div style={{ fontSize: 18, fontWeight: 600, color: token.colorPrimary, marginTop: 4 }}>
+              {getCronLabel(data.config.backupCron)}
             </div>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {data.config.backupCron} · {data.schedulerTimezone}
+            </Typography.Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
@@ -435,24 +441,18 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           {/* Scroll wrapper to prevent modal content overflow */}
           <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: 8, overflowX: "hidden" }}>
             <Form.Item
-              name="cycle"
-              label="备份自动执行周期"
-              tooltip="设置定时自动归档备份的任务时间定时间隔"
-              rules={[{ required: true, message: "请选择备份间隔时间" }]}
+              name="backupCron"
+              label="自动备份调度周期"
+              tooltip={`使用 5 位 cron 表达式，时区跟随服务器：${data.schedulerTimezone}`}
+              rules={[{ required: true, message: "请选择备份调度周期" }]}
             >
-              <Select>
-                <Select.Option value="60">1分钟 (极不推荐，仅限测试使用)</Select.Option>
-                <Select.Option value="3600">1小时</Select.Option>
-                <Select.Option value="21600">6小时</Select.Option>
-                <Select.Option value="43200">12小时</Select.Option>
-                <Select.Option value="86400">1天 (系统推荐)</Select.Option>
-              </Select>
+              <Select options={backupCronOptions} />
             </Form.Item>
 
             <Form.Item
               name="backupPassword"
-              label="归档压缩包加密密码"
-              tooltip="输入后，打包出来的 .sql 压缩包会经过 AES 对称加密，防备服务器目录文件泄露泄密"
+              label="备份文件加密密码"
+              tooltip="输入后，生成的 .sql 文件会经过 AES 对称加密，留空则保存为明文 SQL 文件"
             >
               <Input.Password placeholder="留空则不进行文件对称加密" />
             </Form.Item>

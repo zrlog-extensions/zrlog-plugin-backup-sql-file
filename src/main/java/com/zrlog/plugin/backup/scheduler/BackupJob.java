@@ -92,14 +92,14 @@ public class BackupJob implements Runnable {
         }
     }
 
-    private void backupThenStoreToPrivateStore(String backupFilePath, String backupPassword) throws Exception {
+    private BackupResultVO backupThenStoreToPrivateStore(String backupFilePath, String backupPassword) throws Exception {
         BackupResultVO resultVO = backup(backupFilePath, backupPassword);
         File file = resultVO.getFile();
         if (file == null || !file.exists() || file.length() == 0) {
             throw new RuntimeException("Backup file not generated or size is 0");
         }
         if (!resultVO.isNewFile()) {
-            return;
+            return resultVO;
         }
         try {
             Map<String, String[]> map = new HashMap<>();
@@ -108,6 +108,7 @@ public class BackupJob implements Runnable {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "UploadToPrivate error", e);
         }
+        return resultVO;
     }
 
     public static boolean isSqlFile(File file) {
@@ -185,39 +186,71 @@ public class BackupJob implements Runnable {
         }
     }
 
-    @Override
-    public void run() {
+    private String resolveBackupFilePath(Map<String, String> responseMap) {
         String backupFilePath = Application.sqlPath;
+        if (responseMap != null && responseMap.get("backupFilePath") != null) {
+            backupFilePath = responseMap.get("backupFilePath");
+        }
+        if (Objects.isNull(backupFilePath) || backupFilePath.isEmpty()) {
+            backupFilePath = Application.sqlPath;
+        }
+        return backupFilePath;
+    }
+
+    private int countSqlFiles(String backupFilePath) {
+        File[] files = new File(backupFilePath).listFiles();
+        int count = 0;
+        if (files != null) {
+            for (File f : files) {
+                if (f.isFile() && isSqlFile(f)) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    public BackupRunResult runBackup(boolean uploadToPrivateStore, String successMessage, String errorPrefix) {
+        BackupRunResult runResult = new BackupRunResult();
         try {
             Map<String, String> map = new HashMap<>();
             map.put("key", "backupPassword,backupFilePath");
             Map<String, String> responseMap = ioSession.getResponseSync(ContentType.JSON, map, ActionType.GET_WEBSITE, Map.class);
-            if (responseMap != null && responseMap.get("backupFilePath") != null) {
-                backupFilePath = responseMap.get("backupFilePath");
+            String backupFilePath = resolveBackupFilePath(responseMap);
+            String backupPassword = responseMap != null ? responseMap.get("backupPassword") : null;
+            BackupResultVO resultVO = uploadToPrivateStore
+                    ? backupThenStoreToPrivateStore(backupFilePath, backupPassword)
+                    : backup(backupFilePath, backupPassword);
+            if (resultVO.getFile() == null || !resultVO.getFile().exists() || resultVO.getFile().length() == 0) {
+                throw new RuntimeException("Backup file not generated or size is 0");
             }
-            if (Objects.isNull(backupFilePath) || backupFilePath.isEmpty()) {
-                backupFilePath = Application.sqlPath;
-            }
-            backupThenStoreToPrivateStore(backupFilePath, responseMap != null ? responseMap.get("backupPassword") : null);
-
-            // Count files
-            File[] files = new File(backupFilePath).listFiles();
-            int count = 0;
-            if (files != null) {
-                for (File f : files) {
-                    if (f.isFile() && isSqlFile(f)) {
-                        count++;
-                    }
-                }
-            }
-            recordBackupHistory(true, count, "Scheduled backup completed successfully");
+            int count = countSqlFiles(backupFilePath);
+            String message = resultVO.isNewFile() ? successMessage : "Backup skipped, no database changes detected";
+            recordBackupHistory(true, count, message);
+            runResult.setSuccess(true);
+            runResult.setFilesCount(count);
+            runResult.setFileName(resultVO.getFile().getName());
+            runResult.setNewFile(resultVO.isNewFile());
+            runResult.setMessage(message);
         } catch (URISyntaxException e) {
+            String message = "jdbcUrl error: " + e.getMessage();
             LOGGER.log(Level.SEVERE, "jdbcUrl error", e);
-            recordBackupHistory(false, 0, "jdbcUrl error: " + e.getMessage());
+            recordBackupHistory(false, 0, message);
+            runResult.setSuccess(false);
+            runResult.setMessage(message);
         } catch (Exception e) {
+            String message = errorPrefix + ": " + e.getMessage();
             LOGGER.log(Level.SEVERE, "", e);
-            recordBackupHistory(false, 0, "Backup error: " + e.getMessage());
+            recordBackupHistory(false, 0, message);
+            runResult.setSuccess(false);
+            runResult.setMessage(message);
         }
+        return runResult;
+    }
+
+    @Override
+    public void run() {
+        runBackup(true, "Scheduled backup completed successfully", "Backup error");
     }
 
     public static void main(String[] args) throws IOException {

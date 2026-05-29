@@ -3,7 +3,10 @@ package com.zrlog.plugin.backup.controller;
 import com.google.gson.Gson;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
+import com.zrlog.plugin.backup.scheduler.BackupCapabilityService;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
+import com.zrlog.plugin.backup.scheduler.BackupRunResult;
+import com.zrlog.plugin.common.BasicCronParser;
 import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
@@ -12,11 +15,11 @@ import com.zrlog.plugin.data.codec.ContentType;
 import com.zrlog.plugin.data.codec.HttpRequestInfo;
 import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
+import com.zrlog.plugin.message.SchedulerUpdateResult;
 import com.zrlog.plugin.type.ActionType;
 
-import java.nio.charset.StandardCharsets;
-
 import java.io.File;
+import java.time.ZoneId;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -57,9 +60,33 @@ public class BackupController {
     }
 
     public void update() {
-        session.sendMsg(new MsgPacket(requestInfo.simpleParam(), ContentType.JSON, MsgPacketStatus.SEND_REQUEST, IdUtil.getInt(), ActionType.SET_WEBSITE.name()), msgPacket -> {
-            Application.backupConnectHandle.refresh(session);
-            response(successMap(null));
+        Map<String, Object> params = new HashMap<>(requestInfo.simpleParam());
+        String backupCron = normalizeBackupCron(params);
+        try {
+            new BasicCronParser().parse(backupCron);
+        } catch (RuntimeException e) {
+            response(errorMap("Cron 表达式不支持: " + e.getMessage()));
+            return;
+        }
+        params.put("backupCron", backupCron);
+        params.put("cycle", cronToLegacyCycle(backupCron));
+        session.sendMsg(new MsgPacket(params, ContentType.JSON, MsgPacketStatus.SEND_REQUEST, IdUtil.getInt(), ActionType.SET_WEBSITE.name()), msgPacket -> {
+            if (msgPacket.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS) {
+                response(errorMap("配置保存失败"));
+                return;
+            }
+            session.updateSchedule(BackupCapabilityService.CAPABILITY_KEY, backupCron, true, schedulePacket -> {
+                if (schedulePacket.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS) {
+                    response(errorMap("调度周期更新失败"));
+                    return;
+                }
+                SchedulerUpdateResult result = new Gson().fromJson(schedulePacket.getDataStr(), SchedulerUpdateResult.class);
+                if (result != null && result.isSuccess()) {
+                    response(successMap(result));
+                } else {
+                    response(errorMap(result == null || result.getErrorMessage() == null ? "调度周期更新失败" : result.getErrorMessage()));
+                }
+            });
         });
     }
 
@@ -140,50 +167,12 @@ public class BackupController {
     }
 
     public void backupNow() {
-        try {
-            String backupFilePath = getBackupFilePath();
-            Map<String, Object> keyMap = new HashMap<>();
-            keyMap.put("key", "backupPassword");
-            session.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, msgPacket -> {
-                Map responseMap = new Gson().fromJson(msgPacket.getDataStr(), Map.class);
-                String backupPassword = responseMap != null ? (String) responseMap.get("backupPassword") : null;
-
-                try {
-                    BackupJob backupJob = new BackupJob(session);
-                    com.zrlog.plugin.backup.scheduler.BackupResultVO resultVO = backupJob.backup(backupFilePath, backupPassword);
-                    File file = resultVO.getFile();
-                    if (file == null || !file.exists() || file.length() == 0) {
-                        throw new RuntimeException("备份文件未生成或文件大小为0");
-                    }
-
-                    File[] files = new File(backupFilePath).listFiles();
-                    int count = 0;
-                    if (files != null) {
-                        for (File f : files) {
-                            if (f.isFile() && BackupJob.isSqlFile(f)) {
-                                count++;
-                            }
-                        }
-                    }
-                    backupJob.recordBackupHistory(true, count, "Manual backup completed successfully");
-                    response(successMap(null));
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Manual backup failed", e);
-                    new BackupJob(session).recordBackupHistory(false, 0, "Manual backup failed: " + e.getMessage());
-
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("success", false);
-                    map.put("message", "手动备份失败: " + e.getMessage());
-                    response(map);
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Manual backup failed before running", e);
-            new BackupJob(session).recordBackupHistory(false, 0, "Manual backup failed before running: " + e.getMessage());
-            Map<String, Object> map = new HashMap<>();
-            map.put("success", false);
-            map.put("message", "手动备份失败: " + e.getMessage());
-            response(map);
+        BackupRunResult result = new BackupJob(session).runBackup(false,
+                "Manual backup completed successfully", "Manual backup failed");
+        if (result.isSuccess()) {
+            response(successMap(result));
+        } else {
+            response(errorMap("手动备份失败: " + result.getMessage()));
         }
     }
 
@@ -213,12 +202,14 @@ public class BackupController {
 
     private Map<String, Object> pageData() {
         Map<String, Object> keyMap = new HashMap<>();
-        keyMap.put("key", "cycle,backupPassword,backupFilePath");
+        keyMap.put("key", "backupCron,cycle,backupPassword,backupFilePath");
         Map<String, String> getMap = session.getResponseSync(ContentType.JSON, keyMap, ActionType.GET_WEBSITE, Map.class);
         if (getMap == null) {
             getMap = new HashMap<>();
         }
-        getMap.putIfAbsent("cycle", "3600");
+        String backupCron = normalizeBackupCron(getMap);
+        getMap.put("backupCron", backupCron);
+        getMap.put("cycle", cronToLegacyCycle(backupCron));
         getMap.putIfAbsent("backupPassword", "");
         getMap.putIfAbsent("backupFilePath", "");
 
@@ -279,6 +270,7 @@ public class BackupController {
         data.put("files", fileListMap);
         data.put("history", historyList);
         data.put("maxKeepSize", Application.maxBackupSqlFileCount);
+        data.put("schedulerTimezone", ZoneId.systemDefault().toString());
 
         return successMap(data);
     }
@@ -300,10 +292,68 @@ public class BackupController {
         return value != null && !value.trim().isEmpty();
     }
 
+    private String stringValue(Object value) {
+        return value == null ? "" : value.toString().trim();
+    }
+
+    private String normalizeBackupCron(Map<?, ?> params) {
+        String backupCron = stringValue(params.get("backupCron"));
+        if (notBlank(backupCron)) {
+            return backupCron;
+        }
+        String legacyCycle = stringValue(params.get("cycle"));
+        if (notBlank(legacyCycle)) {
+            return cycleToCron(legacyCycle);
+        }
+        return BackupCapabilityService.DEFAULT_CRON;
+    }
+
+    private String cycleToCron(String cycle) {
+        if ("60".equals(cycle)) {
+            return "*/1 * * * *";
+        }
+        if ("3600".equals(cycle)) {
+            return "0 * * * *";
+        }
+        if ("21600".equals(cycle)) {
+            return "0 */6 * * *";
+        }
+        if ("43200".equals(cycle)) {
+            return "0 */12 * * *";
+        }
+        if ("86400".equals(cycle)) {
+            return BackupCapabilityService.DEFAULT_CRON;
+        }
+        return BackupCapabilityService.DEFAULT_CRON;
+    }
+
+    private String cronToLegacyCycle(String cron) {
+        if ("*/1 * * * *".equals(cron) || "* * * * *".equals(cron)) {
+            return "60";
+        }
+        if ("0 * * * *".equals(cron)) {
+            return "3600";
+        }
+        if ("0 */6 * * *".equals(cron)) {
+            return "21600";
+        }
+        if ("0 */12 * * *".equals(cron)) {
+            return "43200";
+        }
+        return "86400";
+    }
+
     private Map<String, Object> successMap(Object data) {
         Map<String, Object> map = new HashMap<>();
         map.put("success", true);
         map.put("data", data);
+        return map;
+    }
+
+    private Map<String, Object> errorMap(String message) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("success", false);
+        map.put("message", message);
         return map;
     }
 

@@ -18,6 +18,7 @@ export interface Plugin {
 
 export interface BackupConfig {
     cycle: string;
+    backupCron: string;
     backupPassword?: string;
     backupFilePath?: string;
 }
@@ -44,6 +45,7 @@ export interface BackupInfoResponse {
     files: FileRecord[];
     history: HistoryRecord[];
     maxKeepSize: number;
+    schedulerTimezone: string;
 }
 
 export interface StandardResponse<T> {

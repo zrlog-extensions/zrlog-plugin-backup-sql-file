@@ -14,7 +14,6 @@ public class BackupDbPlugin implements IPluginAction {
 
     @Override
     public void stop(IOSession ioSession, MsgPacket msgPacket) {
-        //scheduler.shutdown();
     }
 
     @Override
