@@ -10,7 +10,6 @@ import com.zrlog.plugin.common.BasicCronParser;
 import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
-import com.zrlog.plugin.common.model.PublicInfo;
 import com.zrlog.plugin.data.codec.ContentType;
 import com.zrlog.plugin.data.codec.HttpRequestInfo;
 import com.zrlog.plugin.data.codec.MsgPacket;
@@ -251,16 +250,8 @@ public class BackupController {
         if (historyList == null) {
             historyList = new ArrayList<>();
         }
-
-        // Load public info (theme, primary color)
-        PublicInfo publicInfo = publicInfo();
-        boolean dark = publicInfo.getDarkMode() == null ? isDarkMode() : publicInfo.getDarkMode();
-        String colorPrimary = "#1677ff";
-        if (requestInfo.getHeader() != null && notBlank(requestInfo.getHeader().get("Admin-Color-Primary"))) {
-            colorPrimary = requestInfo.getHeader().get("Admin-Color-Primary");
-        } else if (publicInfo != null && notBlank(publicInfo.getAdminColorPrimary())) {
-            colorPrimary = publicInfo.getAdminColorPrimary();
-        }
+        boolean dark = requestInfo.isDarkMode();
+        String colorPrimary = requestInfo.getAdminColorPrimary();
 
         Map<String, Object> data = new HashMap<>();
         data.put("dark", dark);
@@ -275,17 +266,8 @@ public class BackupController {
         return successMap(data);
     }
 
-    private PublicInfo publicInfo() {
-        try {
-            PublicInfo publicInfo = session.getResponseSync(ContentType.JSON, new HashMap<>(), ActionType.LOAD_PUBLIC_INFO, PublicInfo.class);
-            return publicInfo == null ? new PublicInfo() : publicInfo;
-        } catch (Exception e) {
-            return new PublicInfo();
-        }
-    }
-
     private boolean isDarkMode() {
-        return requestInfo.getHeader() != null && Objects.equals(requestInfo.getHeader().get("Dark-Mode"), "true");
+        return requestInfo.isDarkMode();
     }
 
     private boolean notBlank(String value) {
