@@ -14,8 +14,8 @@ import java.util.Map;
 @Service(BackupCapabilityService.CAPABILITY_KEY)
 @ScheduledCapability(
         key = BackupCapabilityService.CAPABILITY_KEY,
-        label = "备份数据库文件",
-        description = "导出 MySQL 数据库备份文件并同步到私有存储",
+        label = "执行数据库备份",
+        description = "导出 MySQL 备份文件；产生新文件时同步到私有存储。",
         defaultCron = BackupCapabilityService.DEFAULT_CRON,
         timeoutSeconds = 600
 )
