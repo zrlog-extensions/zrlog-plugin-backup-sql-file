@@ -23,3 +23,4 @@ log/
 # Frontend & Auto-Build ignores
 /src/main/resources/templates/
 /src/main/frontend/node_modules/
+/src/main/frontend/build/
