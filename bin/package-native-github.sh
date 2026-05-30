@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 basePath=${1}
-mkdir -p ${basePath}
+mkdir -p "${basePath}"
 echo "real target folder ${basePath}"
 
 java -version
 sh bin/build-info.sh
-./mvnw ${2} clean package -PnodeBuild
-./mvnw ${2} -Pnative -Dagent exec:exec@java-agent -U -PnodeBuild
-./mvnw ${2} -Pnative package -PnodeBuild
+./mvnw ${2} -PnodeBuild clean package
+./mvnw ${2} -Pnative -Dagent exec:exec@java-agent -U
+./mvnw ${2} -Pnative package
 binName="backup-sql-file"
 targetFile=""
 sourceFile=""
