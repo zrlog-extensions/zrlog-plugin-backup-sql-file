@@ -1,5 +1,6 @@
 package com.zrlog.plugin.backup;
 
+import com.zrlog.plugin.RunConstants;
 import com.zrlog.plugin.backup.controller.BackupController;
 import com.zrlog.plugin.backup.scheduler.BackupResultVO;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
@@ -7,6 +8,7 @@ import com.zrlog.plugin.backup.util.NativeUtils;
 import com.zrlog.plugin.common.PluginNativeImageUtils;
 import com.zrlog.plugin.message.Plugin;
 import com.zrlog.plugin.render.SimpleTemplateRender;
+import com.zrlog.plugin.type.RunType;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +22,7 @@ public class GraalvmAgentApplication {
 
 
     public static void main(String[] args) throws IOException {
+        RunConstants.runType = RunType.AGENT;
         PluginNativeImageUtils.usedGsonObject();
         PluginNativeImageUtils.gsonNativeAgentByClazz(Arrays.asList(BackupResultVO.class, BackupRunResult.class));
         String fileArch = NativeUtils.getRealFileArch();
