@@ -1,6 +1,7 @@
 package com.zrlog.plugin.backup.scheduler;
 
 import com.zrlog.plugin.IOSession;
+import com.zrlog.plugin.api.Capability;
 import com.zrlog.plugin.api.IPluginService;
 import com.zrlog.plugin.api.ScheduledCapability;
 import com.zrlog.plugin.api.Service;
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service(BackupCapabilityService.CAPABILITY_KEY)
+@Capability(key = BackupCapabilityService.CAPABILITY_KEY, riskLevel = "medium")
 @ScheduledCapability(
         key = BackupCapabilityService.CAPABILITY_KEY,
         label = "执行数据库备份",
