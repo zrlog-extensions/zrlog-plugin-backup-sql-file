@@ -28,7 +28,7 @@ public class BackupNotificationUtils {
         NotificationRequest request = createRequest(session, runResult,
                 BackupNotificationChannels.normalize(channels).successChannels(),
                 "backupSqlFile.backup.completed",
-                "[ZrLog 数据库备份] " + titleMessage(runResult),
+                "[数据库备份] " + titleMessage(runResult),
                 "info",
                 "/notification/backup-success");
         publish(session, request);
@@ -40,7 +40,7 @@ public class BackupNotificationUtils {
         NotificationRequest request = createRequest(session, runResult,
                 BackupNotificationChannels.normalize(channels).failedChannels(),
                 "backupSqlFile.backup.failed",
-                "[ZrLog 数据库备份] 执行失败",
+                "[数据库备份] 执行失败",
                 "warning",
                 "/notification/backup-failure");
         publish(session, request);
