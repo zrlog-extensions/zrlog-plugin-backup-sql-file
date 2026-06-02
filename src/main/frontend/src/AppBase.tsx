@@ -56,6 +56,8 @@ const defaultNotificationChannels = (): BackupNotificationChannels => ({
 const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
+  const isPhone = Boolean(screens.xs && !screens.sm);
+  const isCompact = !screens.lg;
   const { message } = App.useApp();
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -329,7 +331,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         width: "100%",
         maxWidth: 1240,
         margin: "0 auto",
-        padding: screens.xs ? 14 : 20,
+        padding: isPhone ? 12 : isCompact ? 16 : 20,
         boxSizing: "border-box",
       }}
     >
@@ -338,13 +340,13 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         justify="space-between"
         align="flex-start"
         gap={16}
-        vertical={screens.xs}
+        vertical={isCompact}
         style={{ marginBottom: 18 }}
       >
         <div>
           <Flex align="center" gap={8}>
             <DatabaseOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
-            <Title level={2} style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 650 }}>
+            <Title level={2} style={{ margin: 0, fontSize: isPhone ? 20 : 24, lineHeight: "32px", fontWeight: 650 }}>
               数据库备份设置
             </Title>
           </Flex>
@@ -352,8 +354,8 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             提供 MySQL 数据库的全自动定时归档归一化备份。
           </Text>
         </div>
-        <Space wrap style={{ marginTop: screens.xs ? 12 : 0 }}>
-          <Button icon={<ReloadOutlined/>} onClick={() => refreshPage(false)} loading={loading}>刷新</Button>
+        <Space wrap style={{ width: isPhone ? "100%" : undefined }}>
+          <Button icon={<ReloadOutlined/>} onClick={() => refreshPage(false)} loading={loading} style={isPhone ? {flex: 1} : undefined}>刷新</Button>
           <Button icon={<SettingOutlined/>} onClick={() => {
             const channels = notificationChannels || defaultNotificationChannels();
             form.setFieldsValue({
@@ -365,11 +367,11 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             });
             setSettingsVisible(true);
             loadNotificationChannels();
-          }}>配置策略</Button>
-          <Button type="dashed" icon={<CloudDownloadOutlined/>} onClick={handleBackupNow} loading={loading}>
+          }} style={isPhone ? {flex: 1} : undefined}>配置策略</Button>
+          <Button type="dashed" icon={<CloudDownloadOutlined/>} onClick={handleBackupNow} loading={loading} style={isPhone ? {flex: 1} : undefined}>
             立即备份
           </Button>
-          <Button type="primary" icon={<DownloadOutlined/>} onClick={handleExportSql}>
+          <Button type="primary" icon={<DownloadOutlined/>} onClick={handleExportSql} style={isPhone ? {flex: 1} : undefined}>
             导出SQL文件
           </Button>
         </Space>
@@ -472,7 +474,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             children: (
               <Table 
                 rowKey="fileName"
-                size="middle"
+                size={isPhone ? "small" : "middle"}
                 columns={fileColumns} 
                 dataSource={data.files} 
                 loading={loading}
@@ -493,7 +495,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             children: (
               <Table 
                 rowKey="time"
-                size="middle"
+                size={isPhone ? "small" : "middle"}
                 columns={historyColumns} 
                 dataSource={data.history} 
                 loading={loading}
@@ -520,9 +522,9 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         onCancel={() => setSettingsVisible(false)}
         okText="保存配置"
         cancelText="取消"
-        width={560}
+        width={isPhone ? "calc(100vw - 24px)" : 560}
         destroyOnClose
-        style={{ top: "8vh" }}
+        style={{ top: isPhone ? 12 : "8vh" }}
       >
         <Form
           form={form}
