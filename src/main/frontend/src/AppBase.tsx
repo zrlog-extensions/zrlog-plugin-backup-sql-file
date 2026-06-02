@@ -399,9 +399,6 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             <div style={{ fontSize: 18, fontWeight: 600, color: token.colorPrimary, marginTop: 4 }}>
               {scheduleAvailable ? getCronLabel(scheduleCron) : "调度信息不可用"}
             </div>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {scheduleAvailable ? (scheduleEnabled ? "已启用" : "已停用") : "请在 plugin-core 调度中心检查"}
-            </Typography.Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
