@@ -93,6 +93,14 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
 
   const filterAvailableChannels = (channels?: string[]) => (channels || []).filter(channel => availableChannelValues.has(channel));
 
+  const scheduleCron = data.schedule?.cron || data.config.backupCron;
+  const scheduleAvailable = data.schedule?.success !== false && Boolean(scheduleCron);
+  const scheduleEnabled = data.schedule?.enabled !== false;
+
+  const openSchedulerCenter = () => {
+    window.location.href = "../runtime-scheduler";
+  };
+
   // Reload page data
   const refreshPage = async (silent = false) => {
     setLoading(true);
@@ -147,7 +155,6 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       setSettingsLoading(true);
 
       const params = new URLSearchParams();
-      params.append("backupCron", values.backupCron);
       params.append("backupPassword", values.backupPassword || "");
       params.append("backupFilePath", values.backupFilePath || "");
 
@@ -359,7 +366,6 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           <Button icon={<SettingOutlined/>} onClick={() => {
             const channels = notificationChannels || defaultNotificationChannels();
             form.setFieldsValue({
-              backupCron: data.config.backupCron,
               backupPassword: data.config.backupPassword,
               backupFilePath: data.config.backupFilePath,
               successChannels: channels.successChannels || ["email"],
@@ -367,7 +373,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             });
             setSettingsVisible(true);
             loadNotificationChannels();
-          }} style={isPhone ? {flex: 1} : undefined}>配置策略</Button>
+          }} style={isPhone ? {flex: 1} : undefined}>备份设置</Button>
           <Button type="dashed" icon={<CloudDownloadOutlined/>} onClick={handleBackupNow} loading={loading} style={isPhone ? {flex: 1} : undefined}>
             立即备份
           </Button>
@@ -391,10 +397,10 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           >
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>调度周期</Typography.Text>
             <div style={{ fontSize: 18, fontWeight: 600, color: token.colorPrimary, marginTop: 4 }}>
-              {getCronLabel(data.config.backupCron)}
+              {scheduleAvailable ? getCronLabel(scheduleCron) : "调度信息不可用"}
             </div>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {data.config.backupCron} · {data.schedulerTimezone}
+              {scheduleAvailable ? (scheduleEnabled ? "已启用" : "已停用") : "请在 plugin-core 调度中心检查"}
             </Typography.Text>
           </Card>
         </Col>
@@ -513,7 +519,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: `1px solid ${token.colorBorderSecondary}`, paddingBottom: "12px", width: "100%" }}>
             <SettingOutlined style={{ color: token.colorPrimary }} />
-            <span>配置自动备份参数</span>
+            <span>配置备份参数</span>
           </div>
         }
         open={settingsVisible}
@@ -533,14 +539,14 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         >
           {/* Scroll wrapper to prevent modal content overflow */}
           <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: 8, overflowX: "hidden" }}>
-            <Form.Item
-              name="backupCron"
-              label="自动备份调度周期"
-              tooltip={`使用 5 位 cron 表达式，时区跟随服务器：${data.schedulerTimezone}`}
-              rules={[{ required: true, message: "请选择备份调度周期" }]}
-            >
-              <Select options={backupCronOptions} />
-            </Form.Item>
+            <Alert
+              type="info"
+              showIcon
+              message="自动备份周期由 plugin-core 调度中心管理"
+              description="当前页面只保存备份文件参数和通知渠道；调度 cron、启停和下次执行时间需要在 plugin-core 中配置。"
+              action={<Button size="small" onClick={openSchedulerCenter}>配置调度周期</Button>}
+              style={{ marginBottom: 16 }}
+            />
 
             <Form.Item
               name="backupPassword"

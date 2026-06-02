@@ -46,6 +46,19 @@ export interface BackupNotificationChannelInfo {
     providers: NotificationProviderRow[];
 }
 
+export interface BackupSchedule {
+    success: boolean;
+    errorMessage?: string;
+    automationId?: string;
+    capabilityKey?: string;
+    name?: string;
+    cron?: string;
+    timezone?: string;
+    enabled?: boolean;
+    nextRunAt?: string;
+    lastRunAt?: string;
+}
+
 export interface FileRecord {
     fileName: string;
     index: number;
@@ -69,6 +82,7 @@ export interface BackupInfoResponse {
     history: HistoryRecord[];
     maxKeepSize: number;
     schedulerTimezone: string;
+    schedule: BackupSchedule;
     notificationChannels: BackupNotificationChannels;
 }
 

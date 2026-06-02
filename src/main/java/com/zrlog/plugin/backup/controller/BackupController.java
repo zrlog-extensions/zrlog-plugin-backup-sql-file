@@ -8,7 +8,6 @@ import com.zrlog.plugin.backup.scheduler.BackupCapabilityService;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
 import com.zrlog.plugin.backup.service.BackupNotificationSettingRepository;
-import com.zrlog.plugin.common.BasicCronParser;
 import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
@@ -19,7 +18,7 @@ import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.zrlog.plugin.message.NotificationChannelProvider;
 import com.zrlog.plugin.message.NotificationChannelQueryResult;
-import com.zrlog.plugin.message.SchedulerUpdateResult;
+import com.zrlog.plugin.message.SchedulerQueryResult;
 import com.zrlog.plugin.type.ActionType;
 
 import java.io.File;
@@ -28,6 +27,9 @@ import java.time.ZoneId;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -69,32 +71,14 @@ public class BackupController {
 
     public void update() {
         Map<String, Object> params = new HashMap<>(requestInfo.simpleParam());
-        String backupCron = normalizeBackupCron(params);
-        try {
-            new BasicCronParser().parse(backupCron);
-        } catch (RuntimeException e) {
-            response(errorMap("Cron 表达式不支持: " + e.getMessage()));
-            return;
-        }
-        params.put("backupCron", backupCron);
-        params.put("cycle", cronToLegacyCycle(backupCron));
+        params.remove("backupCron");
+        params.remove("cycle");
         session.sendMsg(new MsgPacket(params, ContentType.JSON, MsgPacketStatus.SEND_REQUEST, IdUtil.getInt(), ActionType.SET_WEBSITE.name()), msgPacket -> {
             if (msgPacket.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS) {
                 response(errorMap("配置保存失败"));
                 return;
             }
-            session.updateSchedule(BackupCapabilityService.CAPABILITY_KEY, backupCron, true, schedulePacket -> {
-                if (schedulePacket.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS) {
-                    response(errorMap("调度周期更新失败"));
-                    return;
-                }
-                SchedulerUpdateResult result = new Gson().fromJson(schedulePacket.getDataStr(), SchedulerUpdateResult.class);
-                if (result != null && result.isSuccess()) {
-                    response(successMap(result));
-                } else {
-                    response(errorMap(result == null || result.getErrorMessage() == null ? "调度周期更新失败" : result.getErrorMessage()));
-                }
-            });
+            response(successMap(params));
         });
     }
 
@@ -247,12 +231,16 @@ public class BackupController {
 
     private Map<String, Object> pageData() {
         Map<String, Object> keyMap = new HashMap<>();
-        keyMap.put("key", "backupCron,cycle,backupPassword,backupFilePath");
+        keyMap.put("key", "backupPassword,backupFilePath");
         Map<String, String> getMap = session.getResponseSync(ContentType.JSON, keyMap, ActionType.GET_WEBSITE, Map.class);
         if (getMap == null) {
             getMap = new HashMap<>();
         }
-        String backupCron = normalizeBackupCron(getMap);
+        Map<String, Object> schedule = queryScheduleInfo();
+        String backupCron = stringValue(schedule.get("cron"));
+        if (!notBlank(backupCron)) {
+            backupCron = BackupCapabilityService.DEFAULT_CRON;
+        }
         getMap.put("backupCron", backupCron);
         getMap.put("cycle", cronToLegacyCycle(backupCron));
         getMap.putIfAbsent("backupPassword", "");
@@ -307,10 +295,74 @@ public class BackupController {
         data.put("files", fileListMap);
         data.put("history", historyList);
         data.put("maxKeepSize", Application.maxBackupSqlFileCount);
-        data.put("schedulerTimezone", ZoneId.systemDefault().toString());
+        data.put("schedulerTimezone", schedulerTimezone(schedule));
+        data.put("schedule", schedule);
         data.put("notificationChannels", notificationSettingRepository.get(session));
 
         return successMap(data);
+    }
+
+    private Map<String, Object> queryScheduleInfo() {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Map<String, Object>> resultRef = new AtomicReference<>();
+        try {
+            session.querySchedule(BackupCapabilityService.CAPABILITY_KEY, msgPacket -> {
+                try {
+                    if (msgPacket.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS) {
+                        resultRef.set(scheduleError("调度信息查询失败"));
+                        return;
+                    }
+                    SchedulerQueryResult result = gson.fromJson(msgPacket.getDataStr(), SchedulerQueryResult.class);
+                    if (result == null) {
+                        resultRef.set(scheduleError("调度信息为空"));
+                    } else if (!result.isSuccess()) {
+                        resultRef.set(scheduleError(notBlank(result.getErrorMessage()) ? result.getErrorMessage() : "调度信息查询失败"));
+                    } else {
+                        resultRef.set(scheduleMap(result));
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+            if (!latch.await(15, TimeUnit.SECONDS)) {
+                return scheduleError("调度信息查询超时");
+            }
+            Map<String, Object> result = resultRef.get();
+            return result == null ? scheduleError("调度信息查询失败") : result;
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "query backup schedule error", e);
+            return scheduleError(e.getMessage());
+        }
+    }
+
+    private Map<String, Object> scheduleMap(SchedulerQueryResult result) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("success", true);
+        map.put("automationId", result.getAutomationId());
+        map.put("capabilityKey", result.getCapabilityKey());
+        map.put("name", result.getName());
+        map.put("cron", result.getCron());
+        map.put("timezone", result.getTimezone());
+        map.put("enabled", result.getEnabled());
+        map.put("nextRunAt", result.getNextRunAt());
+        map.put("lastRunAt", result.getLastRunAt());
+        return map;
+    }
+
+    private Map<String, Object> scheduleError(String message) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("success", false);
+        map.put("capabilityKey", BackupCapabilityService.CAPABILITY_KEY);
+        map.put("cron", BackupCapabilityService.DEFAULT_CRON);
+        map.put("timezone", ZoneId.systemDefault().toString());
+        map.put("enabled", false);
+        map.put("errorMessage", notBlank(message) ? message : "调度信息查询失败");
+        return map;
+    }
+
+    private String schedulerTimezone(Map<String, Object> schedule) {
+        String timezone = stringValue(schedule.get("timezone"));
+        return notBlank(timezone) ? timezone : ZoneId.systemDefault().toString();
     }
 
     private Map<String, Object> notificationChannelInfo() {
@@ -389,37 +441,6 @@ public class BackupController {
                 result.add(value.trim());
             }
         }
-    }
-
-    private String normalizeBackupCron(Map<?, ?> params) {
-        String backupCron = stringValue(params.get("backupCron"));
-        if (notBlank(backupCron)) {
-            return backupCron;
-        }
-        String legacyCycle = stringValue(params.get("cycle"));
-        if (notBlank(legacyCycle)) {
-            return cycleToCron(legacyCycle);
-        }
-        return BackupCapabilityService.DEFAULT_CRON;
-    }
-
-    private String cycleToCron(String cycle) {
-        if ("60".equals(cycle)) {
-            return "*/1 * * * *";
-        }
-        if ("3600".equals(cycle)) {
-            return "0 * * * *";
-        }
-        if ("21600".equals(cycle)) {
-            return "0 */6 * * *";
-        }
-        if ("43200".equals(cycle)) {
-            return "0 */12 * * *";
-        }
-        if ("86400".equals(cycle)) {
-            return BackupCapabilityService.DEFAULT_CRON;
-        }
-        return BackupCapabilityService.DEFAULT_CRON;
     }
 
     private String cronToLegacyCycle(String cron) {
