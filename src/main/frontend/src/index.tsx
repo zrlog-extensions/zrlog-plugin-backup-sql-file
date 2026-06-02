@@ -24,12 +24,8 @@ export interface BackupConfig {
 }
 
 export interface BackupNotificationChannels {
-    schema: string;
-    version: number;
-    data: {
-        successChannels: string[];
-        failedChannels: string[];
-    };
+    successChannels: string[];
+    failedChannels: string[];
 }
 
 export interface NotificationProviderRow {

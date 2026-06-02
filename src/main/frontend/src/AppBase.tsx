@@ -49,12 +49,8 @@ interface AppBaseProps {
 }
 
 const defaultNotificationChannels = (): BackupNotificationChannels => ({
-  schema: "plugin.backupSqlFile.notification.channels",
-  version: 1,
-  data: {
-    successChannels: ["email"],
-    failedChannels: ["email"],
-  },
+  successChannels: ["email"],
+  failedChannels: ["email"],
 });
 
 const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
@@ -128,8 +124,8 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       setNotificationChannels(info.settings || defaultNotificationChannels());
       setNotificationProviders(info.providers || []);
       const values = new Set((info.providers || []).map(row => row.channel).filter(Boolean));
-      const successChannels = (info.settings?.data?.successChannels || []).filter(channel => values.has(channel));
-      const failedChannels = (info.settings?.data?.failedChannels || []).filter(channel => values.has(channel));
+      const successChannels = (info.settings?.successChannels || []).filter(channel => values.has(channel));
+      const failedChannels = (info.settings?.failedChannels || []).filter(channel => values.has(channel));
       form.setFieldsValue({
         successChannels,
         failedChannels: failedChannels.length > 0 ? failedChannels : successChannels,
@@ -364,8 +360,8 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
               backupCron: data.config.backupCron,
               backupPassword: data.config.backupPassword,
               backupFilePath: data.config.backupFilePath,
-              successChannels: channels.data?.successChannels || ["email"],
-              failedChannels: channels.data?.failedChannels || channels.data?.successChannels || ["email"],
+              successChannels: channels.successChannels || ["email"],
+              failedChannels: channels.failedChannels || channels.successChannels || ["email"],
             });
             setSettingsVisible(true);
             loadNotificationChannels();

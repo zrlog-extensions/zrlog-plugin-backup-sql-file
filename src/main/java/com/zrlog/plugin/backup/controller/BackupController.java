@@ -12,10 +12,13 @@ import com.zrlog.plugin.common.BasicCronParser;
 import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
+import com.zrlog.plugin.common.SessionNotificationChannelRepository;
 import com.zrlog.plugin.data.codec.ContentType;
 import com.zrlog.plugin.data.codec.HttpRequestInfo;
 import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
+import com.zrlog.plugin.message.NotificationChannelProvider;
+import com.zrlog.plugin.message.NotificationChannelQueryResult;
 import com.zrlog.plugin.message.SchedulerUpdateResult;
 import com.zrlog.plugin.type.ActionType;
 
@@ -191,7 +194,7 @@ public class BackupController {
 
     public void saveNotificationChannels() {
         Map<String, Object> params = requestInfo.simpleParam();
-        List providers;
+        List<NotificationChannelProvider> providers;
         try {
             providers = queryNotificationProviders();
         } catch (Exception e) {
@@ -209,11 +212,8 @@ public class BackupController {
             failedChannels = successChannels;
         }
         BackupNotificationChannels channels = new BackupNotificationChannels();
-        BackupNotificationChannels.BackupNotificationChannelData data =
-                new BackupNotificationChannels.BackupNotificationChannelData();
-        data.setSuccessChannels(successChannels);
-        data.setFailedChannels(failedChannels);
-        channels.setData(data);
+        channels.setSuccessChannels(successChannels);
+        channels.setFailedChannels(failedChannels);
         notificationSettingRepository.save(session, channels);
         Map<String, Object> result = new HashMap<>();
         result.put("settings", notificationSettingRepository.get(session));
@@ -320,34 +320,19 @@ public class BackupController {
         return data;
     }
 
-    private List queryNotificationProviders() {
-        int msgId = session.queryNotificationChannels(null);
-        MsgPacket response = session.getResponseMsgPacketByMsgId(msgId, Duration.ofSeconds(15));
-        if (response == null) {
-            throw new IllegalStateException("通知渠道查询超时");
-        }
-        Map result = gson.fromJson(response.getDataStr(), Map.class);
-        if (response.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS
-                || result == null
-                || Boolean.FALSE.equals(result.get("success"))
-                || numberValue(result.get("code")) > 0) {
-            String message = stringValue(result == null ? null : result.get("message"));
+    private List<NotificationChannelProvider> queryNotificationProviders() {
+        NotificationChannelQueryResult result = SessionNotificationChannelRepository.of(session).query(Duration.ofSeconds(15));
+        if (!result.isOk()) {
+            String message = stringValue(result.getMessage());
             throw new IllegalStateException(notBlank(message) ? message : "通知渠道查询失败");
         }
-        Object items = result.get("items");
-        if (items instanceof List) {
-            return (List) items;
-        }
-        return new ArrayList();
+        return result.getItems();
     }
 
-    private Set<String> availableChannels(List providers) {
+    private Set<String> availableChannels(List<NotificationChannelProvider> providers) {
         Set<String> channels = new LinkedHashSet<>();
-        for (Object item : providers) {
-            if (!(item instanceof Map)) {
-                continue;
-            }
-            String channel = stringValue(((Map) item).get("channel"));
+        for (NotificationChannelProvider item : providers) {
+            String channel = item == null ? "" : item.getChannel();
             if (notBlank(channel)) {
                 channels.add(channel);
             }
@@ -363,17 +348,6 @@ public class BackupController {
             }
         }
         return result;
-    }
-
-    private int numberValue(Object value) {
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        }
-        try {
-            return Integer.parseInt(stringValue(value));
-        } catch (Exception e) {
-            return 0;
-        }
     }
 
     private boolean isDarkMode() {

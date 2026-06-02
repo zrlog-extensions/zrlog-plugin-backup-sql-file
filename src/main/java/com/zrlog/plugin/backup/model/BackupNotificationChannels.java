@@ -6,13 +6,12 @@ import java.util.List;
 
 public class BackupNotificationChannels {
 
-    public static final String STORE_KEY = "plugin.backupSqlFile.notification.channels";
-    public static final String SCHEMA = STORE_KEY;
+    public static final String SUCCESS_CHANNELS_KEY = "notificationSuccessChannels";
+    public static final String FAILED_CHANNELS_KEY = "notificationFailedChannels";
     private static final List<String> FALLBACK_CHANNELS = Arrays.asList("email");
 
-    private String schema = SCHEMA;
-    private int version = 1;
-    private BackupNotificationChannelData data = new BackupNotificationChannelData();
+    private List<String> successChannels = new ArrayList<String>(FALLBACK_CHANNELS);
+    private List<String> failedChannels = new ArrayList<String>(FALLBACK_CHANNELS);
 
     public static BackupNotificationChannels defaults() {
         return normalize(new BackupNotificationChannels());
@@ -20,26 +19,28 @@ public class BackupNotificationChannels {
 
     public static BackupNotificationChannels normalize(BackupNotificationChannels channels) {
         BackupNotificationChannels normalized = channels == null ? new BackupNotificationChannels() : channels;
-        normalized.setSchema(SCHEMA);
-        if (normalized.getVersion() <= 0) {
-            normalized.setVersion(1);
-        }
-        BackupNotificationChannelData data = normalized.getData();
-        if (data == null) {
-            data = new BackupNotificationChannelData();
-            normalized.setData(data);
-        }
-        data.setSuccessChannels(normalizeChannels(data.getSuccessChannels(), FALLBACK_CHANNELS));
-        data.setFailedChannels(normalizeChannels(data.getFailedChannels(), data.getSuccessChannels()));
+        normalized.setSuccessChannels(normalizeChannels(normalized.getSuccessChannels(), FALLBACK_CHANNELS));
+        normalized.setFailedChannels(normalizeChannels(normalized.getFailedChannels(), normalized.getSuccessChannels()));
         return normalized;
     }
 
     public List<String> successChannels() {
-        return copy(normalize(this).getData().getSuccessChannels());
+        return copy(normalize(this).getSuccessChannels());
     }
 
     public List<String> failedChannels() {
-        return copy(normalize(this).getData().getFailedChannels());
+        return copy(normalize(this).getFailedChannels());
+    }
+
+    public static List<String> decodeChannels(String text, List<String> fallback) {
+        if (text == null || text.trim().isEmpty()) {
+            return normalizeChannels(null, fallback);
+        }
+        return normalizeChannels(Arrays.asList(text.split(",")), fallback);
+    }
+
+    public static String encodeChannels(List<String> channels) {
+        return String.join(",", normalizeChannels(channels, FALLBACK_CHANNELS));
     }
 
     private static List<String> normalizeChannels(List<String> channels, List<String> fallback) {
@@ -65,48 +66,19 @@ public class BackupNotificationChannels {
         return new ArrayList<String>(values == null || values.isEmpty() ? FALLBACK_CHANNELS : values);
     }
 
-    public String getSchema() {
-        return schema;
+    public List<String> getSuccessChannels() {
+        return successChannels;
     }
 
-    public void setSchema(String schema) {
-        this.schema = schema;
+    public void setSuccessChannels(List<String> successChannels) {
+        this.successChannels = successChannels;
     }
 
-    public int getVersion() {
-        return version;
+    public List<String> getFailedChannels() {
+        return failedChannels;
     }
 
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
-    public BackupNotificationChannelData getData() {
-        return data;
-    }
-
-    public void setData(BackupNotificationChannelData data) {
-        this.data = data;
-    }
-
-    public static class BackupNotificationChannelData {
-        private List<String> successChannels = new ArrayList<String>(FALLBACK_CHANNELS);
-        private List<String> failedChannels = new ArrayList<String>(FALLBACK_CHANNELS);
-
-        public List<String> getSuccessChannels() {
-            return successChannels;
-        }
-
-        public void setSuccessChannels(List<String> successChannels) {
-            this.successChannels = successChannels;
-        }
-
-        public List<String> getFailedChannels() {
-            return failedChannels;
-        }
-
-        public void setFailedChannels(List<String> failedChannels) {
-            this.failedChannels = failedChannels;
-        }
+    public void setFailedChannels(List<String> failedChannels) {
+        this.failedChannels = failedChannels;
     }
 }

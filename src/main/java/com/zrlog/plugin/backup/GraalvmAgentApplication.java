@@ -27,8 +27,7 @@ public class GraalvmAgentApplication {
         PluginNativeImageUtils.usedGsonObject();
         PluginNativeImageUtils.gsonNativeAgentByClazz(Arrays.asList(BackupResultVO.class,
                 BackupRunResult.class,
-                BackupNotificationChannels.class,
-                BackupNotificationChannels.BackupNotificationChannelData.class));
+                BackupNotificationChannels.class));
         String fileArch = NativeUtils.getRealFileArch();
         if (Objects.equals(fileArch, "Windows-x86_64")) {
             GraalvmAgentApplication.class.getResourceAsStream("/lib/Windows-x86_64/msvcp120.dll");
