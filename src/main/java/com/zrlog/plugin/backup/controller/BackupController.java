@@ -111,30 +111,7 @@ public class BackupController {
     }
 
     public void files() {
-        File[] files = new File(getBackupFilePath()).listFiles();
-        List<File> fileList = new ArrayList<>();
-        if (files != null && files.length > 0) {
-            for (File file : files) {
-                if (file.isFile() && BackupJob.isSqlFile(file)) {
-                    fileList.add(file);
-                }
-            }
-            fileList.sort((f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
-        }
-
-        List<Map<String, Object>> fileListMap = new ArrayList<>();
-        for (File file : fileList) {
-            Map<String, Object> tMap = new HashMap<>();
-            tMap.put("fileName", file.getName());
-            tMap.put("index", fileList.indexOf(file) + 1);
-            tMap.put("size", formatFileSize(file.length()));
-            tMap.put("lastModified", new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(file.lastModified())));
-            fileListMap.add(tMap);
-        }
-        Map<String, Object> data = new HashMap<>();
-        data.put("files", fileListMap);
-        data.put("maxKeepSize", Application.maxBackupSqlFileCount);
-        response(successMap(data));
+        index();
     }
 
     public void history() {
