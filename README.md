@@ -1,21 +1,29 @@
-# backup-sql-file
+# zrlog-plugin-backup-sql-file
 
-> zrlog 备份插件，支持定时备份，实时导出，备份文件加密
+ZrLog 数据库备份插件。调用 `mysqldump` 导出 MySQL 备份文件，支持手动备份、定时备份、本地保留、备份密码和私有存储同步。
 
-### 支持的系统列表
+## 功能
+
+- 手动导出数据库备份文件
+- 注册定时备份能力，由 plugin-core 调度执行
+- 配置备份文件保存目录和保留策略
+- 可将新备份同步到已配置的私有存储服务
+- 可通过 ZrLog 通知渠道发送备份成功或失败通知
+
+## 支持的系统
 
 - mac (intel & aarch64)
 - linux (amd64 & aarch64)
 - windows (intel)
 
-### dev
+## 构建
 
 ```shell
 export JAVA_HOME=${HOME}/dev/graalvm-jdk-latest
 export PATH=${JAVA_HOME}/bin:$PATH
 ```
 
-### mysqldump 版本信息
+## mysqldump 版本信息
 
 | 库              | 版本                                                     |
 |----------------|--------------------------------------------------------|
