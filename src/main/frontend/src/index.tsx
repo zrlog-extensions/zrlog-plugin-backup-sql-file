@@ -23,6 +23,33 @@ export interface BackupConfig {
     backupFilePath?: string;
 }
 
+export interface BackupNotificationChannels {
+    schema: string;
+    version: number;
+    data: {
+        successChannels: string[];
+        failedChannels: string[];
+    };
+}
+
+export interface NotificationProviderRow {
+    channel: string;
+    providerPluginId: string;
+    providerPluginName?: string;
+    providerPluginPreviewImageBase64?: string;
+    capabilityKey: string;
+    capabilityLabel?: string;
+    providerStatus: string;
+    selected: boolean;
+    confirmed: boolean;
+    reviewRequired: boolean;
+}
+
+export interface BackupNotificationChannelInfo {
+    settings: BackupNotificationChannels;
+    providers: NotificationProviderRow[];
+}
+
 export interface FileRecord {
     fileName: string;
     index: number;
@@ -46,6 +73,7 @@ export interface BackupInfoResponse {
     history: HistoryRecord[];
     maxKeepSize: number;
     schedulerTimezone: string;
+    notificationChannels: BackupNotificationChannels;
 }
 
 export interface StandardResponse<T> {

@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { 
+  Alert,
   Table, 
   Button, 
   Tabs, 
@@ -31,7 +32,14 @@ import {
   InfoCircleOutlined
 } from "@ant-design/icons";
 import axios from "axios";
-import { BackupInfoResponse, FileRecord, StandardResponse } from "./index";
+import {
+  BackupInfoResponse,
+  BackupNotificationChannelInfo,
+  BackupNotificationChannels,
+  FileRecord,
+  NotificationProviderRow,
+  StandardResponse
+} from "./index";
 
 const { Title, Text } = Typography;
 
@@ -39,6 +47,15 @@ interface AppBaseProps {
   data: BackupInfoResponse;
   setResponse: React.Dispatch<React.SetStateAction<StandardResponse<BackupInfoResponse> | null>>;
 }
+
+const defaultNotificationChannels = (): BackupNotificationChannels => ({
+  schema: "plugin.backupSqlFile.notification.channels",
+  version: 1,
+  data: {
+    successChannels: ["email"],
+    failedChannels: ["email"],
+  },
+});
 
 const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
   const { token } = theme.useToken();
@@ -48,8 +65,35 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [settingsVisible, setSettingsVisible] = useState<boolean>(false);
   const [settingsLoading, setSettingsLoading] = useState<boolean>(false);
+  const [channelLoading, setChannelLoading] = useState<boolean>(false);
+  const [notificationChannels, setNotificationChannels] = useState<BackupNotificationChannels>(
+    data.notificationChannels || defaultNotificationChannels()
+  );
+  const [notificationProviders, setNotificationProviders] = useState<NotificationProviderRow[]>([]);
 
   const [form] = Form.useForm();
+
+  const channelOptions = useMemo(() => {
+    const rowsByChannel = new Map<string, NotificationProviderRow[]>();
+    notificationProviders.forEach(row => {
+      if (!row.channel) {
+        return;
+      }
+      rowsByChannel.set(row.channel, [...(rowsByChannel.get(row.channel) || []), row]);
+    });
+    return Array.from(rowsByChannel.entries()).sort(([left], [right]) => left.localeCompare(right)).map(([channel, rows]) => {
+      const provider = rows.find(row => row.selected) || rows.find(row => row.confirmed) || rows[0];
+      const providerName = provider?.providerPluginName || provider?.capabilityLabel || "";
+      return {
+        label: providerName ? `${channel} (${providerName})` : channel,
+        value: channel,
+      };
+    });
+  }, [notificationProviders]);
+
+  const availableChannelValues = useMemo(() => new Set(channelOptions.map(option => option.value)), [channelOptions]);
+
+  const filterAvailableChannels = (channels?: string[]) => (channels || []).filter(channel => availableChannelValues.has(channel));
 
   // Reload page data
   const refreshPage = async (silent = false) => {
@@ -58,6 +102,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       const { data: res } = await axios.get<StandardResponse<BackupInfoResponse>>("json");
       if (res.success) {
         setResponse(res);
+        setNotificationChannels(res.data.notificationChannels || defaultNotificationChannels());
         if (!silent) {
           message.success("刷新成功");
         }
@@ -69,6 +114,31 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       message.error("刷新失败");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadNotificationChannels = async () => {
+    setChannelLoading(true);
+    try {
+      const { data: res } = await axios.get<StandardResponse<BackupNotificationChannelInfo>>("notificationChannels");
+      if (!res.success) {
+        throw new Error(res.message || "通知渠道加载失败");
+      }
+      const info = res.data;
+      setNotificationChannels(info.settings || defaultNotificationChannels());
+      setNotificationProviders(info.providers || []);
+      const values = new Set((info.providers || []).map(row => row.channel).filter(Boolean));
+      const successChannels = (info.settings?.data?.successChannels || []).filter(channel => values.has(channel));
+      const failedChannels = (info.settings?.data?.failedChannels || []).filter(channel => values.has(channel));
+      form.setFieldsValue({
+        successChannels,
+        failedChannels: failedChannels.length > 0 ? failedChannels : successChannels,
+      });
+    } catch (e) {
+      console.error(e);
+      message.error(e instanceof Error ? e.message : "通知渠道加载失败");
+    } finally {
+      setChannelLoading(false);
     }
   };
 
@@ -88,6 +158,24 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       });
 
       if (res && res.success) {
+        const successChannels = filterAvailableChannels(values.successChannels);
+        const failedChannels = filterAvailableChannels(values.failedChannels || values.successChannels);
+        if (successChannels.length === 0) {
+          throw new Error("请选择 plugin-core 中可用的通知渠道");
+        }
+        const channelParams = new URLSearchParams();
+        channelParams.append("successChannels", successChannels.join(","));
+        channelParams.append("failedChannels", (failedChannels.length > 0 ? failedChannels : successChannels).join(","));
+        const { data: channelRes } = await axios.post<StandardResponse<BackupNotificationChannelInfo>>(
+          "saveNotificationChannels",
+          channelParams,
+          { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+        );
+        if (!channelRes || !channelRes.success) {
+          throw new Error(channelRes?.message || "通知配置保存失败");
+        }
+        setNotificationChannels(channelRes.data.settings || defaultNotificationChannels());
+        setNotificationProviders(channelRes.data.providers || notificationProviders);
         message.success("配置保存成功");
         setSettingsVisible(false);
         // Refresh page logs
@@ -97,6 +185,9 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       }
     } catch (e) {
       console.error(e);
+      if (e instanceof Error) {
+        message.error(e.message);
+      }
     } finally {
       setSettingsLoading(false);
     }
@@ -268,12 +359,16 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         <Space wrap style={{ marginTop: screens.xs ? 12 : 0 }}>
           <Button icon={<ReloadOutlined/>} onClick={() => refreshPage(false)} loading={loading}>刷新</Button>
           <Button icon={<SettingOutlined/>} onClick={() => {
+            const channels = notificationChannels || defaultNotificationChannels();
             form.setFieldsValue({
               backupCron: data.config.backupCron,
               backupPassword: data.config.backupPassword,
-              backupFilePath: data.config.backupFilePath
+              backupFilePath: data.config.backupFilePath,
+              successChannels: channels.data?.successChannels || ["email"],
+              failedChannels: channels.data?.failedChannels || channels.data?.successChannels || ["email"],
             });
             setSettingsVisible(true);
+            loadNotificationChannels();
           }}>配置策略</Button>
           <Button type="dashed" icon={<CloudDownloadOutlined/>} onClick={handleBackupNow} loading={loading}>
             立即备份
@@ -464,6 +559,42 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             >
               <Input placeholder="输入物理文件绝对路径（确保具备读写运行权限）" />
             </Form.Item>
+
+            <Form.Item
+              name="successChannels"
+              label="备份成功通知渠道"
+              rules={[{ required: true, message: "请选择通知渠道" }]}
+            >
+              <Select
+                mode="multiple"
+                loading={channelLoading}
+                options={channelOptions}
+                placeholder="选择通知渠道"
+                notFoundContent={channelLoading ? "加载中" : "暂无可用渠道"}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="failedChannels"
+              label="备份失败通知渠道"
+            >
+              <Select
+                mode="multiple"
+                loading={channelLoading}
+                options={channelOptions}
+                placeholder="默认使用成功通知渠道"
+                notFoundContent={channelLoading ? "加载中" : "暂无可用渠道"}
+              />
+            </Form.Item>
+
+            {notificationProviders.length === 0 && !channelLoading && (
+              <Alert
+                type="warning"
+                showIcon
+                message="plugin-core 当前没有可用通知渠道"
+                style={{ marginBottom: 16 }}
+              />
+            )}
           </div>
         </Form>
       </Modal>

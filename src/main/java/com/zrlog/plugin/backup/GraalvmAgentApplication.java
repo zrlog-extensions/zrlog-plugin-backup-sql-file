@@ -1,6 +1,7 @@
 package com.zrlog.plugin.backup;
 
 import com.zrlog.plugin.RunConstants;
+import com.zrlog.plugin.backup.model.BackupNotificationChannels;
 import com.zrlog.plugin.backup.controller.BackupController;
 import com.zrlog.plugin.backup.scheduler.BackupResultVO;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
@@ -24,7 +25,10 @@ public class GraalvmAgentApplication {
     public static void main(String[] args) throws IOException {
         RunConstants.runType = RunType.AGENT;
         PluginNativeImageUtils.usedGsonObject();
-        PluginNativeImageUtils.gsonNativeAgentByClazz(Arrays.asList(BackupResultVO.class, BackupRunResult.class));
+        PluginNativeImageUtils.gsonNativeAgentByClazz(Arrays.asList(BackupResultVO.class,
+                BackupRunResult.class,
+                BackupNotificationChannels.class,
+                BackupNotificationChannels.BackupNotificationChannelData.class));
         String fileArch = NativeUtils.getRealFileArch();
         if (Objects.equals(fileArch, "Windows-x86_64")) {
             GraalvmAgentApplication.class.getResourceAsStream("/lib/Windows-x86_64/msvcp120.dll");
@@ -32,7 +36,7 @@ public class GraalvmAgentApplication {
         GraalvmAgentApplication.class.getResourceAsStream("/lib/" + fileArch + "/mysqldump");
         String basePath = System.getProperty("user.dir").replace("\\target", "").replace("/target", "");
         File file = new File(basePath + "/src/main/resources");
-        PluginNativeImageUtils.doLoopResourceLoad(file.listFiles(), file.getPath() + "/templates", "/templates");
+        PluginNativeImageUtils.doLoopResourceLoad(file.listFiles(), file.getPath() + "/", "/");
         //Application.nativeAgent = true;
         Plugin plugin = new Plugin();
         plugin.setName("test");

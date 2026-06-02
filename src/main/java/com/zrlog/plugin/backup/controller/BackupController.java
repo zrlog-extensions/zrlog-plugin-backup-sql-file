@@ -3,9 +3,11 @@ package com.zrlog.plugin.backup.controller;
 import com.google.gson.Gson;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
+import com.zrlog.plugin.backup.model.BackupNotificationChannels;
 import com.zrlog.plugin.backup.scheduler.BackupCapabilityService;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
+import com.zrlog.plugin.backup.service.BackupNotificationSettingRepository;
 import com.zrlog.plugin.common.BasicCronParser;
 import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
@@ -18,6 +20,7 @@ import com.zrlog.plugin.message.SchedulerUpdateResult;
 import com.zrlog.plugin.type.ActionType;
 
 import java.io.File;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -35,6 +38,9 @@ public class BackupController {
     private final IOSession session;
     private final MsgPacket requestPacket;
     private final HttpRequestInfo requestInfo;
+    private final BackupNotificationSettingRepository notificationSettingRepository =
+            BackupNotificationSettingRepository.getInstance();
+    private final Gson gson = new Gson();
 
     public BackupController(IOSession session, MsgPacket requestPacket, HttpRequestInfo requestInfo) {
         this.session = session;
@@ -175,6 +181,46 @@ public class BackupController {
         }
     }
 
+    public void notificationChannels() {
+        try {
+            response(successMap(notificationChannelInfo()));
+        } catch (Exception e) {
+            response(errorMap(e.getMessage()));
+        }
+    }
+
+    public void saveNotificationChannels() {
+        Map<String, Object> params = requestInfo.simpleParam();
+        List providers;
+        try {
+            providers = queryNotificationProviders();
+        } catch (Exception e) {
+            response(errorMap(e.getMessage()));
+            return;
+        }
+        Set<String> availableChannels = availableChannels(providers);
+        List<String> successChannels = configuredChannels(params.get("successChannels"), availableChannels);
+        if (successChannels.isEmpty()) {
+            response(errorMap("请选择 plugin-core 中可用的通知渠道"));
+            return;
+        }
+        List<String> failedChannels = configuredChannels(params.get("failedChannels"), availableChannels);
+        if (failedChannels.isEmpty()) {
+            failedChannels = successChannels;
+        }
+        BackupNotificationChannels channels = new BackupNotificationChannels();
+        BackupNotificationChannels.BackupNotificationChannelData data =
+                new BackupNotificationChannels.BackupNotificationChannelData();
+        data.setSuccessChannels(successChannels);
+        data.setFailedChannels(failedChannels);
+        channels.setData(data);
+        notificationSettingRepository.save(session, channels);
+        Map<String, Object> result = new HashMap<>();
+        result.put("settings", notificationSettingRepository.get(session));
+        result.put("providers", providers);
+        response(successMap(result));
+    }
+
     private String getBackupFilePath() {
         Map<String, Object> keyMap = new HashMap<>();
         keyMap.put("key", "backupFilePath");
@@ -262,8 +308,72 @@ public class BackupController {
         data.put("history", historyList);
         data.put("maxKeepSize", Application.maxBackupSqlFileCount);
         data.put("schedulerTimezone", ZoneId.systemDefault().toString());
+        data.put("notificationChannels", notificationSettingRepository.get(session));
 
         return successMap(data);
+    }
+
+    private Map<String, Object> notificationChannelInfo() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("settings", notificationSettingRepository.get(session));
+        data.put("providers", queryNotificationProviders());
+        return data;
+    }
+
+    private List queryNotificationProviders() {
+        int msgId = session.queryNotificationChannels(null);
+        MsgPacket response = session.getResponseMsgPacketByMsgId(msgId, Duration.ofSeconds(15));
+        if (response == null) {
+            throw new IllegalStateException("通知渠道查询超时");
+        }
+        Map result = gson.fromJson(response.getDataStr(), Map.class);
+        if (response.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS
+                || result == null
+                || Boolean.FALSE.equals(result.get("success"))
+                || numberValue(result.get("code")) > 0) {
+            String message = stringValue(result == null ? null : result.get("message"));
+            throw new IllegalStateException(notBlank(message) ? message : "通知渠道查询失败");
+        }
+        Object items = result.get("items");
+        if (items instanceof List) {
+            return (List) items;
+        }
+        return new ArrayList();
+    }
+
+    private Set<String> availableChannels(List providers) {
+        Set<String> channels = new LinkedHashSet<>();
+        for (Object item : providers) {
+            if (!(item instanceof Map)) {
+                continue;
+            }
+            String channel = stringValue(((Map) item).get("channel"));
+            if (notBlank(channel)) {
+                channels.add(channel);
+            }
+        }
+        return channels;
+    }
+
+    private List<String> configuredChannels(Object value, Set<String> availableChannels) {
+        List<String> result = new ArrayList<>();
+        for (String channel : channelList(value)) {
+            if (availableChannels.contains(channel) && !result.contains(channel)) {
+                result.add(channel);
+            }
+        }
+        return result;
+    }
+
+    private int numberValue(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(stringValue(value));
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private boolean isDarkMode() {
@@ -275,7 +385,36 @@ public class BackupController {
     }
 
     private String stringValue(Object value) {
-        return value == null ? "" : value.toString().trim();
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof List && !((List) value).isEmpty()) {
+            return String.valueOf(((List) value).get(0));
+        }
+        return String.valueOf(value).trim();
+    }
+
+    private List<String> channelList(Object value) {
+        if (value instanceof List) {
+            List<String> result = new ArrayList<>();
+            for (Object item : (List) value) {
+                addChannels(result, stringValue(item));
+            }
+            return result;
+        }
+        return Arrays.asList(stringValue(value).split(","));
+    }
+
+    private void addChannels(List<String> result, String text) {
+        if (!notBlank(text)) {
+            return;
+        }
+        String[] values = text.split(",");
+        for (String value : values) {
+            if (notBlank(value)) {
+                result.add(value.trim());
+            }
+        }
     }
 
     private String normalizeBackupCron(Map<?, ?> params) {
