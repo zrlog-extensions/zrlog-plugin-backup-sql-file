@@ -95,7 +95,6 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
 
   const scheduleCron = data.schedule?.cron || data.config.backupCron;
   const scheduleAvailable = data.schedule?.success !== false && Boolean(scheduleCron);
-  const scheduleEnabled = data.schedule?.enabled !== false;
 
   const openSchedulerCenter = () => {
     window.location.href = "../runtime-scheduler";
