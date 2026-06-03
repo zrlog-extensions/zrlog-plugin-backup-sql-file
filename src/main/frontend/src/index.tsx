@@ -135,7 +135,7 @@ const Index = () => {
             }}
         >
             <StyleProvider transformers={[legacyLogicalPropertiesTransformer]}>
-                <Content>
+                <Content style={{minHeight: "100vh", backgroundColor: response.data.dark ? "#141414" : undefined, color: response.data.dark ? "#dfdfdf" : undefined}}>
                     <App>
                         <AppBase data={response.data} setResponse={setResponse}/>
                     </App>
