@@ -20,10 +20,6 @@ public class BackupExecution {
 
     private static final Logger LOGGER = LoggerUtil.getLogger(BackupExecution.class);
 
-    public static void main(String[] args) throws IOException {
-        System.out.println(getBinFile());
-    }
-
     private static File getBinFile() throws IOException {
         File binFile;
         if (testMysqlDumpInstalled()) {
