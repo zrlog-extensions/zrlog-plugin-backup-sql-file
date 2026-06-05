@@ -3,14 +3,20 @@ package com.zrlog.plugin.backup.controller;
 import com.google.gson.Gson;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
+import com.zrlog.plugin.backup.model.SiteExportPreviewResponse;
 import com.zrlog.plugin.backup.model.BackupNotificationChannels;
 import com.zrlog.plugin.backup.scheduler.BackupCapabilityService;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
 import com.zrlog.plugin.backup.service.BackupNotificationSettingRepository;
+import com.zrlog.plugin.backup.service.SiteExportService;
+import com.zrlog.plugin.backup.service.SiteImportPrecheckService;
+import com.zrlog.plugin.client.HttpClientUtils;
+import com.zrlog.plugin.common.IOUtil;
 import com.zrlog.plugin.backup.util.FileUtils;
 import com.zrlog.plugin.common.IdUtil;
 import com.zrlog.plugin.common.LoggerUtil;
+import com.zrlog.plugin.common.PathKit;
 import com.zrlog.plugin.common.SessionNotificationChannelRepository;
 import com.zrlog.plugin.data.codec.ContentType;
 import com.zrlog.plugin.data.codec.HttpRequestInfo;
@@ -145,6 +151,59 @@ public class BackupController {
         }
     }
 
+    public void siteExportPreview() {
+        try {
+            response(successMap(new SiteExportService(session).preview(parseSiteExportOptions())));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Site export preview failed", e);
+            response(errorMap("全站导出预览失败: " + e.getMessage()));
+        }
+    }
+
+    public void siteExportDownload() {
+        SiteExportService.SiteExportPackage exportPackage = null;
+        try {
+            exportPackage = new SiteExportService(session).createPackage(parseSiteExportOptions());
+            File file = exportPackage.getFile();
+            if (file.exists()) {
+                session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
+            } else {
+                session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_ERROR);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Site export download failed", e);
+            response(errorMap("全站导出失败: " + e.getMessage()));
+        } finally {
+            if (exportPackage != null && exportPackage.getFile() != null && exportPackage.getFile().exists()) {
+                deleteQuietly(exportPackage.getFile().getParentFile());
+            }
+        }
+    }
+
+    public void siteImportPreview() {
+        String source = stringValue(params().get("source"));
+        if (!notBlank(source)) {
+            response(errorMap("请先上传全站导出 zip 文件"));
+            return;
+        }
+        File tmpPath = new File(PathKit.getTmpPath() + "/" + UUID.randomUUID() + "/");
+        File zipFile = new File(tmpPath, "site-export.zip");
+        try {
+            Map<String, String> requestHeaders = new HashMap<>();
+            if (requestInfo.getHeader() != null && requestInfo.getHeader().get("Cookie") != null) {
+                requestHeaders.put("Cookie", requestInfo.getHeader().get("Cookie"));
+            }
+            byte[] bytes = HttpClientUtils.sendGetRequest(source, byte[].class, requestHeaders, session, Duration.ofSeconds(360));
+            IOUtil.writeBytesToFile(bytes, zipFile);
+            response(successMap(new SiteImportPrecheckService(session).precheck(zipFile)));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Site import precheck failed", e);
+            response(errorMap("导入前预检失败: " + e.getMessage()));
+        } finally {
+            deleteQuietly(tmpPath);
+        }
+    }
+
     public void notificationChannels() {
         try {
             response(successMap(notificationChannelInfo()));
@@ -275,8 +334,61 @@ public class BackupController {
         data.put("schedulerTimezone", schedulerTimezone(schedule));
         data.put("schedule", schedule);
         data.put("notificationChannels", notificationSettingRepository.get(session));
+        try {
+            data.put("siteExport", new SiteExportService(session)
+                    .preview(new SiteExportPreviewResponse.SiteExportOptions()));
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "load site export preview error", e);
+            data.put("siteExport", new SiteExportPreviewResponse());
+            data.put("siteExportError", e.getMessage());
+        }
 
         return successMap(data);
+    }
+
+    private SiteExportPreviewResponse.SiteExportOptions parseSiteExportOptions() {
+        Map<String, Object> params = params();
+        SiteExportPreviewResponse.SiteExportOptions options = new SiteExportPreviewResponse.SiteExportOptions();
+        options.setIncludeDrafts(boolParam(params, "includeDrafts", options.isIncludeDrafts()));
+        options.setIncludePrivateArticles(
+                boolParam(params, "includePrivateArticles", options.isIncludePrivateArticles()));
+        options.setIncludeComments(boolParam(params, "includeComments", options.isIncludeComments()));
+        options.setIncludeMediaFiles(boolParam(params, "includeMediaFiles", options.isIncludeMediaFiles()));
+        options.setIncludeThemeFiles(boolParam(params, "includeThemeFiles", options.isIncludeThemeFiles()));
+        options.setIncludePluginConfigs(boolParam(params, "includePluginConfigs", options.isIncludePluginConfigs()));
+        options.setIncludePluginRuntimeState(false);
+        options.setIncludeAiMessages(boolParam(params, "includeAiMessages", options.isIncludeAiMessages()));
+        return options;
+    }
+
+    private boolean boolParam(Map<String, Object> params, String key, boolean defaultValue) {
+        Object value = params.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(stringValue(value));
+    }
+
+    private Map<String, Object> params() {
+        if (requestInfo.getParam() == null) {
+            return new HashMap<>();
+        }
+        return requestInfo.simpleParam();
+    }
+
+    private void deleteQuietly(File file) {
+        if (file == null || !file.exists()) {
+            return;
+        }
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteQuietly(child);
+                }
+            }
+        }
+        file.delete();
     }
 
     private Map<String, Object> queryScheduleInfo() {

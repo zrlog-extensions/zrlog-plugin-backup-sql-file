@@ -74,6 +74,77 @@ export interface HistoryRecord {
     message: string;
 }
 
+export interface SiteExportOptions {
+    includeDrafts: boolean;
+    includePrivateArticles: boolean;
+    includeComments: boolean;
+    includeMediaFiles: boolean;
+    includeThemeFiles: boolean;
+    includePluginConfigs: boolean;
+    includePluginRuntimeState: boolean;
+    includeAiMessages: boolean;
+}
+
+export interface SiteExportCounts {
+    articles: number;
+    publishedArticles: number;
+    draftArticles: number;
+    privateArticles: number;
+    articleVersions: number;
+    comments: number;
+    types: number;
+    tags: number;
+    navs: number;
+    links: number;
+    websiteKeys: number;
+    mediaFiles: number;
+    mediaBytes: number;
+    aiMessageArticles: number;
+    aiMessageBytes: number;
+}
+
+export interface RedactionEntry {
+    scope: string;
+    key: string;
+    reason: string;
+}
+
+export interface SiteExportPreviewData {
+    schemaVersion: number;
+    exportId: string;
+    generatedAt: number;
+    packageName: string;
+    options: SiteExportOptions;
+    counts: SiteExportCounts;
+    packagePaths: string[];
+    redactions: RedactionEntry[];
+    notes: string[];
+}
+
+export interface SiteImportPrecheckEntry {
+    scope: string;
+    key: string;
+    status: string;
+    detail: string;
+}
+
+export interface SiteImportPrecheckData {
+    validPackage: boolean;
+    packageName: string;
+    schemaVersion: number;
+    exportId: string;
+    generatedAt: number;
+    options: SiteExportOptions;
+    counts: SiteExportCounts;
+    packagePaths: string[];
+    articleRows: number;
+    articleAliasConflicts: number;
+    aiMessageRows: number;
+    aiMessageIncludedRows: number;
+    aiMessageExcludedRows: number;
+    checks: SiteImportPrecheckEntry[];
+}
+
 export interface BackupInfoResponse {
     dark: boolean;
     colorPrimary: string;
@@ -85,6 +156,8 @@ export interface BackupInfoResponse {
     schedulerTimezone: string;
     schedule: BackupSchedule;
     notificationChannels: BackupNotificationChannels;
+    siteExport: SiteExportPreviewData;
+    siteExportError?: string;
 }
 
 export interface StandardResponse<T> {

@@ -26,6 +26,11 @@
             <artifactId>zrlog-plugin-common</artifactId>
             <version>4.0.5-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.hibegin</groupId>
+            <artifactId>common-dao</artifactId>
+            <version>1.1.9</version>
+        </dependency>
     </dependencies>
 
     <repositories>

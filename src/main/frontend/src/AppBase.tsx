@@ -40,6 +40,7 @@ import {
   NotificationProviderRow,
   StandardResponse
 } from "./index";
+import SiteExportPanel from "./SiteExportPanel";
 
 const { Title, Text } = Typography;
 
@@ -382,8 +383,21 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         </Space>
       </Flex>
 
-      {/* Metrics Cards */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+      <Tabs
+        defaultActiveKey="database"
+        items={[
+          {
+            key: "database",
+            label: (
+              <span>
+                <DatabaseOutlined />
+                数据库备份
+              </span>
+            ),
+            children: (
+              <>
+                {/* Metrics Cards */}
+                <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} md={6}>
           <Card
             bordered
@@ -509,6 +523,23 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           }
         ]} />
       </Card>
+              </>
+            ),
+          },
+          {
+            key: "siteExport",
+            label: (
+              <span>
+                <FileZipOutlined />
+                全站导出
+              </span>
+            ),
+            children: (
+              <SiteExportPanel initialPreview={data.siteExport} initialError={data.siteExportError} />
+            ),
+          },
+        ]}
+      />
 
       {/* Parameter Settings Modal */}
       <Modal
