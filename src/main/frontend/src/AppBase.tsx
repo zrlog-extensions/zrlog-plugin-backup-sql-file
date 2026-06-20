@@ -166,7 +166,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
         const successChannels = filterAvailableChannels(values.successChannels);
         const failedChannels = filterAvailableChannels(values.failedChannels || values.successChannels);
         if (successChannels.length === 0) {
-          throw new Error("请选择 plugin-core 中可用的通知渠道");
+          throw new Error("请选择可用的通知渠道");
         }
         const channelParams = new URLSearchParams();
         channelParams.append("successChannels", successChannels.join(","));
@@ -358,7 +358,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             </Title>
           </Flex>
           <Text type="secondary" style={{ marginTop: 6, display: "block", fontSize: 14 }}>
-            提供 MySQL 数据库的全自动定时归档归一化备份。
+            备份 MySQL 数据库，支持手动执行、定时调度和本地保留。
           </Text>
         </div>
         <Space wrap style={{ width: isPhone ? "100%" : undefined }}>
@@ -569,8 +569,8 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             <Alert
               type="info"
               showIcon
-              message="自动备份周期由 plugin-core 调度中心管理"
-              description="当前页面只保存备份文件参数和通知渠道；调度 cron、启停和下次执行时间需要在 plugin-core 中配置。"
+              message="自动备份周期在调度中心配置"
+              description="当前页面只保存备份文件参数和通知渠道；周期、启停和下次执行时间在调度中心配置。"
               action={<Button size="small" onClick={openSchedulerCenter}>配置调度周期</Button>}
               style={{ marginBottom: 16 }}
             />
@@ -622,7 +622,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
               <Alert
                 type="warning"
                 showIcon
-                message="plugin-core 当前没有可用通知渠道"
+                message="当前没有可用通知渠道"
                 style={{ marginBottom: 16 }}
               />
             )}

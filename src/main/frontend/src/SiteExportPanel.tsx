@@ -110,7 +110,7 @@ const redactionReasonMap: Record<string, string> = {
   excludedByDefault: "默认排除",
   excludedByOption: "按选项排除",
   notPresent: "当前不存在",
-  defaultFalseWithoutPluginExportCapability: "缺少插件导出能力，默认不包含",
+  defaultFalseWithoutPluginExportCapability: "缺少插件导出接口，默认不包含",
 };
 
 const noteMap: Record<string, string> = {
@@ -118,7 +118,7 @@ const noteMap: Record<string, string> = {
   sqlBackupIsNotSiteExport: "SQL 备份不是全站迁移包。",
   aiMessagesExcludedByDefault: "文章 AI 对话默认不包含。",
   aiMessagesIncludedExplicitly: "文章 AI 对话已按选项包含。",
-  pluginDataRequiresExportCapability: "插件数据需要插件提供独立导出能力。",
+  pluginDataRequiresExportCapability: "插件数据需要插件提供独立导出接口。",
 };
 
 const importCheckScopeMap: Record<string, string> = {
