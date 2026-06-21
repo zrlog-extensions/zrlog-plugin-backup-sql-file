@@ -114,11 +114,11 @@ const redactionReasonMap: Record<string, string> = {
 };
 
 const noteMap: Record<string, string> = {
-  previewOnly: "预览只统计将导出的内容，不写入数据。",
-  sqlBackupIsNotSiteExport: "SQL 备份不是全站迁移包。",
-  aiMessagesExcludedByDefault: "文章 AI 对话默认不包含。",
-  aiMessagesIncludedExplicitly: "文章 AI 对话已按选项包含。",
-  pluginDataRequiresExportCapability: "插件数据需要插件提供独立导出接口。",
+  previewOnly: "预览只统计将导出的内容，不写入数据",
+  sqlBackupIsNotSiteExport: "SQL 备份不是全站迁移包",
+  aiMessagesExcludedByDefault: "文章 AI 对话默认不包含",
+  aiMessagesIncludedExplicitly: "文章 AI 对话已按选项包含",
+  pluginDataRequiresExportCapability: "插件数据需要插件提供独立导出接口",
 };
 
 const importCheckScopeMap: Record<string, string> = {
@@ -417,13 +417,13 @@ const SiteExportPanel: FunctionComponent<SiteExportPanelProps> = ({initialPrevie
           }
         >
           <Typography.Paragraph type="secondary">
-            生成可迁移的站点 zip 包，覆盖文章、分类、标签、评论、媒体、站点配置、主题配置和可审计的排除项。
+            生成可迁移的站点 zip 包，覆盖文章、分类、标签、评论、媒体、站点配置、主题配置和可审计的排除项
           </Typography.Paragraph>
           <Alert
             type="info"
             showIcon
             message="边界说明"
-            description="SQL 备份用于数据库快照；全站导出用于站点迁移，默认不包含插件运行状态和文章 AI 对话。"
+            description="SQL 备份用于数据库快照；全站导出用于站点迁移，默认不包含插件运行状态和文章 AI 对话"
           />
         </Card>
 
@@ -437,7 +437,7 @@ const SiteExportPanel: FunctionComponent<SiteExportPanelProps> = ({initialPrevie
         >
           <Space direction="vertical" size="middle" style={{width: "100%"}}>
             <Typography.Paragraph type="secondary">
-              上传 ZrLog 全站导出 zip，只读取包结构和清单，不写入站点数据。
+              上传 ZrLog 全站导出 zip，只读取包结构和清单，不写入站点数据
             </Typography.Paragraph>
             <Space wrap>
               <Upload

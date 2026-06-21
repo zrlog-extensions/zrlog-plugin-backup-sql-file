@@ -358,7 +358,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             </Title>
           </Flex>
           <Text type="secondary" style={{ marginTop: 6, display: "block", fontSize: 14 }}>
-            备份 MySQL 数据库，支持手动执行、定时调度和本地保留。
+            备份 MySQL 数据库，支持手动执行、定时调度和本地保留
           </Text>
         </div>
         <Space wrap style={{ width: isPhone ? "100%" : undefined }}>
@@ -570,7 +570,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
               type="info"
               showIcon
               message="自动备份周期在调度中心配置"
-              description="当前页面只保存备份文件参数和通知渠道；周期、启停和下次执行时间在调度中心配置。"
+              description="当前页面只保存备份文件参数和通知渠道；周期、启停和下次执行时间在调度中心配置"
               action={<Button size="small" onClick={openSchedulerCenter}>配置调度周期</Button>}
               style={{ marginBottom: 16 }}
             />
@@ -586,7 +586,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             <Form.Item
               name="backupFilePath"
               label="存储绝对物理路径"
-              tooltip="配置备份文件存储的本地宿主机绝对目录。如留空，将自动写入插件根目录下的 /sql/ 文件夹下"
+              tooltip="本地宿主机上的备份文件目录，留空时写入插件根目录下的 /sql/ 文件夹"
             >
               <Input placeholder="输入物理文件绝对路径（确保具备读写运行权限）" />
             </Form.Item>
