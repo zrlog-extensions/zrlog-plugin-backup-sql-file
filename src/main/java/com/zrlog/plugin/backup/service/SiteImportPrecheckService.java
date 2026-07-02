@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.model.SiteExportPreviewResponse;
+import com.zrlog.plugin.backup.model.SiteImportAiMessageRow;
+import com.zrlog.plugin.backup.model.SiteImportArticleRow;
 import com.zrlog.plugin.backup.model.SiteImportPrecheckResponse;
 
 import java.io.BufferedReader;
@@ -206,8 +208,8 @@ public class SiteImportPrecheckService {
 
     private String readAlias(String jsonLine) {
         try {
-            Map<?, ?> row = GSON.fromJson(jsonLine, Map.class);
-            return Objects.toString(row.get("alias"), "");
+            SiteImportArticleRow row = GSON.fromJson(jsonLine, SiteImportArticleRow.class);
+            return Objects.toString(row == null ? null : row.getAlias(), "");
         } catch (RuntimeException e) {
             return "";
         }
@@ -234,8 +236,8 @@ public class SiteImportPrecheckService {
                 }
                 rows++;
                 try {
-                    Map<?, ?> row = GSON.fromJson(line, Map.class);
-                    if (row.get("message") != null) {
+                    SiteImportAiMessageRow row = GSON.fromJson(line, SiteImportAiMessageRow.class);
+                    if (row != null && row.getMessage() != null) {
                         included++;
                     } else {
                         excluded++;

@@ -3,8 +3,16 @@ package com.zrlog.plugin.backup.controller;
 import com.google.gson.Gson;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
-import com.zrlog.plugin.backup.model.SiteExportPreviewResponse;
+import com.zrlog.plugin.backup.model.BackupApiResponse;
+import com.zrlog.plugin.backup.model.BackupConfig;
+import com.zrlog.plugin.backup.model.BackupConfigValues;
+import com.zrlog.plugin.backup.model.BackupFileRecord;
+import com.zrlog.plugin.backup.model.BackupNotificationChannelInfo;
 import com.zrlog.plugin.backup.model.BackupNotificationChannels;
+import com.zrlog.plugin.backup.model.BackupPageData;
+import com.zrlog.plugin.backup.model.BackupRequestParams;
+import com.zrlog.plugin.backup.model.SiteExportPreviewResponse;
+import com.zrlog.plugin.backup.model.WebsiteKeyRequest;
 import com.zrlog.plugin.backup.scheduler.BackupCapabilityService;
 import com.zrlog.plugin.backup.scheduler.BackupJob;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
@@ -76,15 +84,16 @@ public class BackupController {
     }
 
     public void update() {
-        Map<String, Object> params = new HashMap<>(requestInfo.simpleParam());
-        params.remove("backupCron");
-        params.remove("cycle");
-        session.sendMsg(new MsgPacket(params, ContentType.JSON, MsgPacketStatus.SEND_REQUEST, IdUtil.getInt(), ActionType.SET_WEBSITE.name()), msgPacket -> {
+        BackupConfig config = params().toConfig();
+        BackupConfigValues request = new BackupConfigValues();
+        request.setBackupPassword(config.getBackupPassword());
+        request.setBackupFilePath(config.getBackupFilePath());
+        session.sendMsg(new MsgPacket(request, ContentType.JSON, MsgPacketStatus.SEND_REQUEST, IdUtil.getInt(), ActionType.SET_WEBSITE.name()), msgPacket -> {
             if (msgPacket.getStatus() != MsgPacketStatus.RESPONSE_SUCCESS) {
-                response(errorMap("配置保存失败"));
+                response(BackupApiResponse.error("配置保存失败"));
                 return;
             }
-            response(successMap(params));
+            response(BackupApiResponse.success(config));
         });
     }
 
@@ -121,23 +130,10 @@ public class BackupController {
     }
 
     public void history() {
-        Map<String, Object> keyMap = new HashMap<>();
-        keyMap.put("key", "syncHistory");
-        session.sendJsonMsg(keyMap, ActionType.GET_WEBSITE.name(), IdUtil.getInt(), MsgPacketStatus.SEND_REQUEST, msgPacket -> {
-            Map responseMap = new Gson().fromJson(msgPacket.getDataStr(), Map.class);
-            String syncHistoryJson = responseMap != null ? (String) responseMap.get("syncHistory") : null;
-            List historyList = null;
-            if (syncHistoryJson != null && !syncHistoryJson.trim().isEmpty()) {
-                try {
-                    historyList = new Gson().fromJson(syncHistoryJson, List.class);
-                } catch (Exception e) {
-                    historyList = new ArrayList<>();
-                }
-            }
-            if (historyList == null) {
-                historyList = new ArrayList<>();
-            }
-            response(successMap(historyList));
+        session.sendJsonMsg(WebsiteKeyRequest.of("syncHistory"), ActionType.GET_WEBSITE.name(), IdUtil.getInt(),
+                MsgPacketStatus.SEND_REQUEST, msgPacket -> {
+            BackupConfigValues values = gson.fromJson(msgPacket.getDataStr(), BackupConfigValues.class);
+            response(BackupApiResponse.success(historyList(values == null ? null : values.getSyncHistory())));
         });
     }
 
@@ -145,18 +141,18 @@ public class BackupController {
         BackupRunResult result = new BackupJob(session).runBackup(false,
                 "Manual backup completed successfully", "Manual backup failed");
         if (result.isSuccess()) {
-            response(successMap(result));
+            response(BackupApiResponse.success(result));
         } else {
-            response(errorMap("手动备份失败: " + result.getMessage()));
+            response(BackupApiResponse.error("手动备份失败: " + result.getMessage()));
         }
     }
 
     public void siteExportPreview() {
         try {
-            response(successMap(new SiteExportService(session).preview(parseSiteExportOptions())));
+            response(BackupApiResponse.success(new SiteExportService(session).preview(parseSiteExportOptions())));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Site export preview failed", e);
-            response(errorMap("全站导出预览失败: " + e.getMessage()));
+            response(BackupApiResponse.error("全站导出预览失败: " + e.getMessage()));
         }
     }
 
@@ -172,7 +168,7 @@ public class BackupController {
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Site export download failed", e);
-            response(errorMap("全站导出失败: " + e.getMessage()));
+            response(BackupApiResponse.error("全站导出失败: " + e.getMessage()));
         } finally {
             if (exportPackage != null && exportPackage.getFile() != null && exportPackage.getFile().exists()) {
                 deleteQuietly(exportPackage.getFile().getParentFile());
@@ -181,9 +177,9 @@ public class BackupController {
     }
 
     public void siteImportPreview() {
-        String source = stringValue(params().get("source"));
+        String source = params().getSource();
         if (!notBlank(source)) {
-            response(errorMap("请先上传全站导出 zip 文件"));
+            response(BackupApiResponse.error("请先上传全站导出 zip 文件"));
             return;
         }
         File tmpPath = new File(PathKit.getTmpPath() + "/" + UUID.randomUUID() + "/");
@@ -195,10 +191,10 @@ public class BackupController {
             }
             byte[] bytes = HttpClientUtils.sendGetRequest(source, byte[].class, requestHeaders, session, Duration.ofSeconds(360));
             IOUtil.writeBytesToFile(bytes, zipFile);
-            response(successMap(new SiteImportPrecheckService(session).precheck(zipFile)));
+            response(BackupApiResponse.success(new SiteImportPrecheckService(session).precheck(zipFile)));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Site import precheck failed", e);
-            response(errorMap("导入前预检失败: " + e.getMessage()));
+            response(BackupApiResponse.error("导入前预检失败: " + e.getMessage()));
         } finally {
             deleteQuietly(tmpPath);
         }
@@ -206,28 +202,28 @@ public class BackupController {
 
     public void notificationChannels() {
         try {
-            response(successMap(notificationChannelInfo()));
+            response(BackupApiResponse.success(notificationChannelInfo()));
         } catch (Exception e) {
-            response(errorMap(e.getMessage()));
+            response(BackupApiResponse.error(e.getMessage()));
         }
     }
 
     public void saveNotificationChannels() {
-        Map<String, Object> params = requestInfo.simpleParam();
+        BackupRequestParams params = params();
         List<NotificationChannelProvider> providers;
         try {
             providers = queryNotificationProviders();
         } catch (Exception e) {
-            response(errorMap(e.getMessage()));
+            response(BackupApiResponse.error(e.getMessage()));
             return;
         }
         Set<String> availableChannels = availableChannels(providers);
-        List<String> successChannels = configuredChannels(params.get("successChannels"), availableChannels);
+        List<String> successChannels = configuredChannels(params.getSuccessChannels(), availableChannels);
         if (successChannels.isEmpty()) {
-            response(errorMap("请选择 plugin-core 中可用的通知渠道"));
+            response(BackupApiResponse.error("请选择 plugin-core 中可用的通知渠道"));
             return;
         }
-        List<String> failedChannels = configuredChannels(params.get("failedChannels"), availableChannels);
+        List<String> failedChannels = configuredChannels(params.getFailedChannels(), availableChannels);
         if (failedChannels.isEmpty()) {
             failedChannels = successChannels;
         }
@@ -235,17 +231,16 @@ public class BackupController {
         channels.setSuccessChannels(successChannels);
         channels.setFailedChannels(failedChannels);
         notificationSettingRepository.save(session, channels);
-        Map<String, Object> result = new HashMap<>();
-        result.put("settings", notificationSettingRepository.get(session));
-        result.put("providers", providers);
-        response(successMap(result));
+        BackupNotificationChannelInfo result = new BackupNotificationChannelInfo();
+        result.setSettings(notificationSettingRepository.get(session));
+        result.setProviders(providers);
+        response(BackupApiResponse.success(result));
     }
 
     private String getBackupFilePath() {
-        Map<String, Object> keyMap = new HashMap<>();
-        keyMap.put("key", "backupFilePath");
-        Map<String, String> responseMap = session.getResponseSync(ContentType.JSON, keyMap, ActionType.GET_WEBSITE, Map.class);
-        String configPath = responseMap != null ? responseMap.get("backupFilePath") : null;
+        BackupConfigValues response = session.getResponseSync(ContentType.JSON, WebsiteKeyRequest.of("backupFilePath"),
+                ActionType.GET_WEBSITE, BackupConfigValues.class);
+        String configPath = response != null ? response.getBackupFilePath() : null;
         return getBackupFilePath(configPath);
     }
 
@@ -257,7 +252,7 @@ public class BackupController {
     }
 
     public void downfile() {
-        File file = FileUtils.safeAppendFilePath(getBackupFilePath(), (String) requestInfo.simpleParam().get("file"));
+        File file = FileUtils.safeAppendFilePath(getBackupFilePath(), params().getFile());
         if (BackupJob.isSqlFile(file) && file.exists()) {
             session.sendFileMsg(file, requestPacket.getMsgId(), MsgPacketStatus.RESPONSE_SUCCESS);
         } else {
@@ -265,25 +260,25 @@ public class BackupController {
         }
     }
 
-    private Map<String, Object> pageData() {
-        Map<String, Object> keyMap = new HashMap<>();
-        keyMap.put("key", "backupPassword,backupFilePath");
-        Map<String, String> getMap = session.getResponseSync(ContentType.JSON, keyMap, ActionType.GET_WEBSITE, Map.class);
-        if (getMap == null) {
-            getMap = new HashMap<>();
+    private BackupApiResponse<BackupPageData> pageData() {
+        BackupConfigValues values = session.getResponseSync(ContentType.JSON,
+                WebsiteKeyRequest.of("backupPassword,backupFilePath"), ActionType.GET_WEBSITE, BackupConfigValues.class);
+        if (values == null) {
+            values = new BackupConfigValues();
         }
         Map<String, Object> schedule = queryScheduleInfo();
         String backupCron = stringValue(schedule.get("cron"));
         if (!notBlank(backupCron)) {
             backupCron = BackupCapabilityService.DEFAULT_CRON;
         }
-        getMap.put("backupCron", backupCron);
-        getMap.put("cycle", cronToLegacyCycle(backupCron));
-        getMap.putIfAbsent("backupPassword", "");
-        getMap.putIfAbsent("backupFilePath", "");
+        BackupConfig config = new BackupConfig();
+        config.setBackupPassword(defaultText(values.getBackupPassword(), ""));
+        config.setBackupFilePath(defaultText(values.getBackupFilePath(), ""));
+        config.setBackupCron(backupCron);
+        config.setCycle(cronToLegacyCycle(backupCron));
 
         // Fetch backup files
-        File[] files = new File(getBackupFilePath(getMap.get("backupFilePath"))).listFiles();
+        File[] files = new File(getBackupFilePath(config.getBackupFilePath())).listFiles();
         List<File> fileList = new ArrayList<>();
         if (files != null && files.length > 0) {
             for (File file : files) {
@@ -294,86 +289,56 @@ public class BackupController {
             fileList.sort((f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
         }
 
-        List<Map<String, Object>> fileListMap = new ArrayList<>();
+        List<BackupFileRecord> fileListMap = new ArrayList<>();
         for (File file : fileList) {
-            Map<String, Object> tMap = new HashMap<>();
-            tMap.put("fileName", file.getName());
-            tMap.put("index", fileList.indexOf(file) + 1);
-            tMap.put("size", formatFileSize(file.length()));
-            tMap.put("lastModified", new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(file.lastModified())));
-            fileListMap.add(tMap);
+            BackupFileRecord record = new BackupFileRecord();
+            record.setFileName(file.getName());
+            record.setIndex(fileList.indexOf(file) + 1);
+            record.setSize(formatFileSize(file.length()));
+            record.setLastModified(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date(file.lastModified())));
+            fileListMap.add(record);
         }
 
         // Fetch backup history
-        Map<String, Object> historyKeyMap = new HashMap<>();
-        historyKeyMap.put("key", "syncHistory");
-        Map historyResponseMap = session.getResponseSync(ContentType.JSON, historyKeyMap, ActionType.GET_WEBSITE, Map.class);
-        String syncHistoryJson = historyResponseMap != null ? (String) historyResponseMap.get("syncHistory") : null;
-        List historyList = null;
-        if (syncHistoryJson != null && !syncHistoryJson.trim().isEmpty()) {
-            try {
-                historyList = new Gson().fromJson(syncHistoryJson, List.class);
-            } catch (Exception e) {
-                historyList = new ArrayList<>();
-            }
-        }
-        if (historyList == null) {
-            historyList = new ArrayList<>();
-        }
-        boolean dark = requestInfo.isDarkMode();
-        String colorPrimary = requestInfo.getAdminColorPrimary();
+        BackupConfigValues historyResponse = session.getResponseSync(ContentType.JSON, WebsiteKeyRequest.of("syncHistory"),
+                ActionType.GET_WEBSITE, BackupConfigValues.class);
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("dark", dark);
-        data.put("colorPrimary", colorPrimary);
-        data.put("plugin", session.getPlugin());
-        data.put("config", getMap);
-        data.put("files", fileListMap);
-        data.put("history", historyList);
-        data.put("maxKeepSize", Application.maxBackupSqlFileCount);
-        data.put("schedulerTimezone", schedulerTimezone(schedule));
-        data.put("schedule", schedule);
-        data.put("notificationChannels", notificationSettingRepository.get(session));
+        BackupPageData data = new BackupPageData();
+        data.setDark(requestInfo.isDarkMode());
+        data.setColorPrimary(requestInfo.getAdminColorPrimary());
+        data.setPlugin(session.getPlugin());
+        data.setConfig(config);
+        data.setFiles(fileListMap);
+        data.setHistory(historyList(historyResponse == null ? null : historyResponse.getSyncHistory()));
+        data.setMaxKeepSize(Application.maxBackupSqlFileCount);
+        data.setSchedulerTimezone(schedulerTimezone(schedule));
+        data.setSchedule(schedule);
+        data.setNotificationChannels(notificationSettingRepository.get(session));
         try {
-            data.put("siteExport", new SiteExportService(session)
-                    .preview(new SiteExportPreviewResponse.SiteExportOptions()));
+            data.setSiteExport(new SiteExportService(session).preview(new SiteExportPreviewResponse.SiteExportOptions()));
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "load site export preview error", e);
-            data.put("siteExport", new SiteExportPreviewResponse());
-            data.put("siteExportError", e.getMessage());
+            data.setSiteExport(new SiteExportPreviewResponse());
+            data.setSiteExportError(e.getMessage());
         }
 
-        return successMap(data);
+        return BackupApiResponse.success(data);
     }
 
     private SiteExportPreviewResponse.SiteExportOptions parseSiteExportOptions() {
-        Map<String, Object> params = params();
-        SiteExportPreviewResponse.SiteExportOptions options = new SiteExportPreviewResponse.SiteExportOptions();
-        options.setIncludeDrafts(boolParam(params, "includeDrafts", options.isIncludeDrafts()));
-        options.setIncludePrivateArticles(
-                boolParam(params, "includePrivateArticles", options.isIncludePrivateArticles()));
-        options.setIncludeComments(boolParam(params, "includeComments", options.isIncludeComments()));
-        options.setIncludeMediaFiles(boolParam(params, "includeMediaFiles", options.isIncludeMediaFiles()));
-        options.setIncludeThemeFiles(boolParam(params, "includeThemeFiles", options.isIncludeThemeFiles()));
-        options.setIncludePluginConfigs(boolParam(params, "includePluginConfigs", options.isIncludePluginConfigs()));
-        options.setIncludePluginRuntimeState(false);
-        options.setIncludeAiMessages(boolParam(params, "includeAiMessages", options.isIncludeAiMessages()));
-        return options;
+        return params().toSiteExportOptions();
     }
 
-    private boolean boolParam(Map<String, Object> params, String key, boolean defaultValue) {
-        Object value = params.get(key);
-        if (value == null) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(stringValue(value));
+    private BackupRequestParams params() {
+        return BackupRequestParams.fromParams(this::paramObject);
     }
 
-    private Map<String, Object> params() {
-        if (requestInfo.getParam() == null) {
-            return new HashMap<>();
+    private Object paramObject(String key) {
+        if (requestInfo.getParam() == null || requestInfo.getParam().get(key) == null || requestInfo.getParam().get(key).length == 0) {
+            return null;
         }
-        return requestInfo.simpleParam();
+        String[] values = requestInfo.getParam().get(key);
+        return values.length == 1 ? values[0] : values;
     }
 
     private void deleteQuietly(File file) {
@@ -454,10 +419,10 @@ public class BackupController {
         return notBlank(timezone) ? timezone : ZoneId.systemDefault().toString();
     }
 
-    private Map<String, Object> notificationChannelInfo() {
-        Map<String, Object> data = new HashMap<>();
-        data.put("settings", notificationSettingRepository.get(session));
-        data.put("providers", queryNotificationProviders());
+    private BackupNotificationChannelInfo notificationChannelInfo() {
+        BackupNotificationChannelInfo data = new BackupNotificationChannelInfo();
+        data.setSettings(notificationSettingRepository.get(session));
+        data.setProviders(queryNotificationProviders());
         return data;
     }
 
@@ -510,14 +475,7 @@ public class BackupController {
     }
 
     private List<String> channelList(Object value) {
-        if (value instanceof List) {
-            List<String> result = new ArrayList<>();
-            for (Object item : (List) value) {
-                addChannels(result, stringValue(item));
-            }
-            return result;
-        }
-        return Arrays.asList(stringValue(value).split(","));
+        return BackupRequestParams.channelList(value);
     }
 
     private void addChannels(List<String> result, String text) {
@@ -548,21 +506,23 @@ public class BackupController {
         return "86400";
     }
 
-    private Map<String, Object> successMap(Object data) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("success", true);
-        map.put("data", data);
-        return map;
+    private List historyList(String syncHistoryJson) {
+        if (syncHistoryJson != null && !syncHistoryJson.trim().isEmpty()) {
+            try {
+                List historyList = gson.fromJson(syncHistoryJson, List.class);
+                return historyList == null ? new ArrayList<>() : historyList;
+            } catch (Exception e) {
+                return new ArrayList<>();
+            }
+        }
+        return new ArrayList<>();
     }
 
-    private Map<String, Object> errorMap(String message) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("success", false);
-        map.put("message", message);
-        return map;
+    private String defaultText(String value, String defaultValue) {
+        return notBlank(value) ? value : defaultValue;
     }
 
-    private void response(Map<String, Object> map) {
-        session.sendMsg(new MsgPacket(map, ContentType.JSON, MsgPacketStatus.RESPONSE_SUCCESS, requestPacket.getMsgId(), requestPacket.getMethodStr()));
+    private void response(BackupApiResponse<?> response) {
+        session.sendMsg(new MsgPacket(response, ContentType.JSON, MsgPacketStatus.RESPONSE_SUCCESS, requestPacket.getMsgId(), requestPacket.getMethodStr()));
     }
 }

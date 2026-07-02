@@ -2,8 +2,12 @@ package com.zrlog.plugin.backup.service;
 
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.model.BackupNotificationChannels;
+import com.zrlog.plugin.backup.model.BackupNotificationSettingValues;
+import com.zrlog.plugin.backup.model.WebsiteKeyRequest;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.SessionKvRepository;
+import com.zrlog.plugin.data.codec.ContentType;
+import com.zrlog.plugin.type.ActionType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,14 +25,18 @@ public class BackupNotificationSettingRepository {
 
     public BackupNotificationChannels get(IOSession session) {
         try {
-            Map<String, Object> values = SessionKvRepository.of(session).read(
-                    BackupNotificationChannels.SUCCESS_CHANNELS_KEY,
-                    BackupNotificationChannels.FAILED_CHANNELS_KEY);
+            BackupNotificationSettingValues values = session.getResponseSync(ContentType.JSON,
+                    WebsiteKeyRequest.of(BackupNotificationChannels.SUCCESS_CHANNELS_KEY + ","
+                            + BackupNotificationChannels.FAILED_CHANNELS_KEY),
+                    ActionType.GET_WEBSITE, BackupNotificationSettingValues.class);
+            if (values == null) {
+                values = new BackupNotificationSettingValues();
+            }
             BackupNotificationChannels channels = new BackupNotificationChannels();
             channels.setSuccessChannels(BackupNotificationChannels.decodeChannels(
-                    stringValue(values.get(BackupNotificationChannels.SUCCESS_CHANNELS_KEY)), null));
+                    values.getNotificationSuccessChannels(), null));
             channels.setFailedChannels(BackupNotificationChannels.decodeChannels(
-                    stringValue(values.get(BackupNotificationChannels.FAILED_CHANNELS_KEY)),
+                    values.getNotificationFailedChannels(),
                     channels.getSuccessChannels()));
             return BackupNotificationChannels.normalize(channels);
         } catch (Exception e) {
@@ -47,7 +55,4 @@ public class BackupNotificationSettingRepository {
         SessionKvRepository.of(session).write(values);
     }
 
-    private String stringValue(Object value) {
-        return value == null ? "" : String.valueOf(value);
-    }
 }

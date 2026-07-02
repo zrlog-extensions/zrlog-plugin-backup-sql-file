@@ -3,12 +3,15 @@ package com.zrlog.plugin.backup.scheduler;
 import com.zrlog.plugin.IOSession;
 import com.google.gson.Gson;
 import com.zrlog.plugin.backup.Application;
+import com.zrlog.plugin.backup.model.BackupConfigValues;
+import com.zrlog.plugin.backup.model.WebsiteKeyRequest;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
 import com.zrlog.plugin.backup.util.AESCrypto;
 import com.zrlog.plugin.common.IOUtil;
 import com.zrlog.plugin.common.LoggerUtil;
 import com.zrlog.plugin.common.SecurityUtils;
 import com.zrlog.plugin.data.codec.ContentType;
+import com.zrlog.plugin.message.DbPropertiesResponse;
 import com.zrlog.plugin.type.ActionType;
 
 import java.io.File;
@@ -44,8 +47,8 @@ public class BackupJob implements Runnable {
 
 
     public BackupResultVO backup(String backupFilePath, String backupPassword) throws Exception {
-        Map responseSync = ioSession.getResponseSync(ContentType.JSON, new HashMap<>(), ActionType.GET_DB_PROPERTIES, Map.class);
-        try (FileInputStream fileInputStream = new FileInputStream((String) responseSync.get("dbProperties"))) {
+        DbPropertiesResponse responseSync = ioSession.getResponseSync(ContentType.JSON, new HashMap<>(), ActionType.GET_DB_PROPERTIES, DbPropertiesResponse.class);
+        try (FileInputStream fileInputStream = new FileInputStream(responseSync.getDbProperties())) {
             Properties properties = new Properties();
             properties.load(fileInputStream);
             URI uri = new URI(properties.getProperty("jdbcUrl").replace("jdbc:", ""));
@@ -148,10 +151,9 @@ public class BackupJob implements Runnable {
 
     public synchronized void recordBackupHistory(boolean success, int count, String msg) {
         try {
-            Map<String, String> getMap = new HashMap<>();
-            getMap.put("key", "syncHistory");
-            Map responseMap = ioSession.getResponseSync(ContentType.JSON, getMap, ActionType.GET_WEBSITE, Map.class);
-            String syncHistoryJson = responseMap != null ? (String) responseMap.get("syncHistory") : null;
+            BackupConfigValues response = ioSession.getResponseSync(ContentType.JSON, WebsiteKeyRequest.of("syncHistory"),
+                    ActionType.GET_WEBSITE, BackupConfigValues.class);
+            String syncHistoryJson = response != null ? response.getSyncHistory() : null;
 
             List<Map<String, Object>> historyList = null;
             if (syncHistoryJson != null && !syncHistoryJson.trim().isEmpty()) {
@@ -180,16 +182,16 @@ public class BackupJob implements Runnable {
             String newJson = new Gson().toJson(historyList);
             Map<String, Object> setMap = new HashMap<>();
             setMap.put("syncHistory", newJson);
-            ioSession.getResponseSync(ContentType.JSON, setMap, ActionType.SET_WEBSITE, Map.class);
+            ioSession.getResponseSync(ContentType.JSON, setMap, ActionType.SET_WEBSITE, Object.class);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to record backup history", e);
         }
     }
 
-    private String resolveBackupFilePath(Map<String, String> responseMap) {
+    private String resolveBackupFilePath(BackupConfigValues response) {
         String backupFilePath = Application.sqlPath;
-        if (responseMap != null && responseMap.get("backupFilePath") != null) {
-            backupFilePath = responseMap.get("backupFilePath");
+        if (response != null && response.getBackupFilePath() != null) {
+            backupFilePath = response.getBackupFilePath();
         }
         if (Objects.isNull(backupFilePath) || backupFilePath.isEmpty()) {
             backupFilePath = Application.sqlPath;
@@ -213,11 +215,10 @@ public class BackupJob implements Runnable {
     public BackupRunResult runBackup(boolean uploadToPrivateStore, String successMessage, String errorPrefix) {
         BackupRunResult runResult = new BackupRunResult();
         try {
-            Map<String, String> map = new HashMap<>();
-            map.put("key", "backupPassword,backupFilePath");
-            Map<String, String> responseMap = ioSession.getResponseSync(ContentType.JSON, map, ActionType.GET_WEBSITE, Map.class);
-            String backupFilePath = resolveBackupFilePath(responseMap);
-            String backupPassword = responseMap != null ? responseMap.get("backupPassword") : null;
+            BackupConfigValues response = ioSession.getResponseSync(ContentType.JSON,
+                    WebsiteKeyRequest.of("backupPassword,backupFilePath"), ActionType.GET_WEBSITE, BackupConfigValues.class);
+            String backupFilePath = resolveBackupFilePath(response);
+            String backupPassword = response != null ? response.getBackupPassword() : null;
             BackupResultVO resultVO = uploadToPrivateStore
                     ? backupThenStoreToPrivateStore(backupFilePath, backupPassword)
                     : backup(backupFilePath, backupPassword);

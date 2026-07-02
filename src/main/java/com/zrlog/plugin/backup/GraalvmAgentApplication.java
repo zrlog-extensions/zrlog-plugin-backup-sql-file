@@ -1,7 +1,20 @@
 package com.zrlog.plugin.backup;
 
 import com.zrlog.plugin.RunConstants;
+import com.zrlog.plugin.backup.model.BackupApiResponse;
+import com.zrlog.plugin.backup.model.BackupConfig;
+import com.zrlog.plugin.backup.model.BackupConfigValues;
+import com.zrlog.plugin.backup.model.BackupFileRecord;
+import com.zrlog.plugin.backup.model.BackupNotificationChannelInfo;
 import com.zrlog.plugin.backup.model.BackupNotificationChannels;
+import com.zrlog.plugin.backup.model.BackupNotificationSettingValues;
+import com.zrlog.plugin.backup.model.BackupPageData;
+import com.zrlog.plugin.backup.model.BackupRequestParams;
+import com.zrlog.plugin.backup.model.SiteExportPreviewResponse;
+import com.zrlog.plugin.backup.model.SiteImportAiMessageRow;
+import com.zrlog.plugin.backup.model.SiteImportArticleRow;
+import com.zrlog.plugin.backup.model.SiteImportPrecheckResponse;
+import com.zrlog.plugin.backup.model.WebsiteKeyRequest;
 import com.zrlog.plugin.backup.controller.BackupController;
 import com.zrlog.plugin.backup.scheduler.BackupResultVO;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
@@ -25,7 +38,15 @@ public class GraalvmAgentApplication {
     public static void main(String[] args) throws IOException {
         RunConstants.runType = RunType.AGENT;
         PluginNativeImageUtils.usedGsonObject();
-        PluginNativeImageUtils.gsonNativeAgentByClazz(Arrays.asList(BackupResultVO.class,
+        PluginNativeImageUtils.gsonNativeAgentByClazz(Arrays.asList(WebsiteKeyRequest.class,
+                BackupApiResponse.class, BackupConfig.class, BackupConfigValues.class, BackupFileRecord.class,
+                BackupNotificationChannelInfo.class,
+                BackupNotificationSettingValues.class, BackupPageData.class, BackupRequestParams.class,
+                SiteExportPreviewResponse.class, SiteExportPreviewResponse.SiteExportOptions.class,
+                SiteExportPreviewResponse.SiteExportCounts.class, SiteExportPreviewResponse.RedactionEntry.class,
+                SiteImportAiMessageRow.class, SiteImportArticleRow.class,
+                SiteImportPrecheckResponse.class, SiteImportPrecheckResponse.PrecheckEntry.class,
+                BackupResultVO.class,
                 BackupRunResult.class,
                 BackupNotificationChannels.class));
         String fileArch = NativeUtils.getRealFileArch();
