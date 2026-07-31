@@ -6,6 +6,8 @@ import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.model.BackupConfigValues;
 import com.zrlog.plugin.backup.model.WebsiteKeyRequest;
 import com.zrlog.plugin.backup.scheduler.handle.BackupExecution;
+import com.zrlog.plugin.backup.service.BackupProtectionRepository;
+import com.zrlog.plugin.backup.service.RestoreDrillService;
 import com.zrlog.plugin.backup.util.AESCrypto;
 import com.zrlog.plugin.common.IOUtil;
 import com.zrlog.plugin.common.LoggerUtil;
@@ -231,8 +233,11 @@ public class BackupJob implements Runnable {
             runResult.setSuccess(true);
             runResult.setFilesCount(count);
             runResult.setFileName(resultVO.getFile().getName());
+            runResult.setFileSha256(RestoreDrillService.sha256(resultVO.getFile()));
             runResult.setNewFile(resultVO.isNewFile());
+            runResult.setCompletedAt(System.currentTimeMillis());
             runResult.setMessage(message);
+            BackupProtectionRepository.recordBackup(ioSession, runResult);
         } catch (URISyntaxException e) {
             String message = "jdbcUrl error: " + e.getMessage();
             LOGGER.log(Level.SEVERE, "jdbcUrl error", e);

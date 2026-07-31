@@ -18,6 +18,8 @@ import com.zrlog.plugin.backup.model.WebsiteKeyRequest;
 import com.zrlog.plugin.backup.controller.BackupController;
 import com.zrlog.plugin.backup.scheduler.BackupResultVO;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
+import com.zrlog.plugin.backup.model.RestoreDrillResult;
+import com.zrlog.plugin.backup.scheduler.RestoreDrillCapabilityService;
 import com.zrlog.plugin.backup.util.NativeUtils;
 import com.zrlog.plugin.common.PluginNativeImageUtils;
 import com.zrlog.plugin.message.Plugin;
@@ -48,6 +50,7 @@ public class GraalvmAgentApplication {
                 SiteImportPrecheckResponse.class, SiteImportPrecheckResponse.PrecheckEntry.class,
                 BackupResultVO.class,
                 BackupRunResult.class,
+                RestoreDrillResult.class,
                 BackupNotificationChannels.class));
         String fileArch = NativeUtils.getRealFileArch();
         if (Objects.equals(fileArch, "Windows-x86_64")) {
@@ -67,6 +70,11 @@ public class GraalvmAgentApplication {
         objectObjectHashMap.put("theme", "light");
         new SimpleTemplateRender().render("/templates/index", plugin, objectObjectHashMap);
         PluginNativeImageUtils.exposeController(Collections.singletonList(BackupController.class));
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        }
         Application.main(args);
 
     }

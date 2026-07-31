@@ -4,6 +4,8 @@ import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.model.BackupNotificationChannels;
 import com.zrlog.plugin.backup.scheduler.BackupCapabilityService;
 import com.zrlog.plugin.backup.scheduler.BackupRunResult;
+import com.zrlog.plugin.backup.scheduler.RestoreDrillCapabilityService;
+import com.zrlog.plugin.backup.model.RestoreDrillResult;
 import com.zrlog.plugin.data.codec.MsgPacket;
 import com.zrlog.plugin.data.codec.MsgPacketStatus;
 import com.zrlog.plugin.message.NotificationRequest;
@@ -46,6 +48,28 @@ public class BackupNotificationUtils {
         publish(session, request);
     }
 
+    public static void publishRestoreDrillSuccess(IOSession session,
+                                                  RestoreDrillResult result,
+                                                  BackupNotificationChannels channels) {
+        publish(session, createRestoreDrillRequest(session, result,
+                BackupNotificationChannels.normalize(channels).successChannels(),
+                "backupSqlFile.restoreDrill.completed",
+                "[数据库备份] 恢复验证通过",
+                "info",
+                "/notification/restore-drill-success"));
+    }
+
+    public static void publishRestoreDrillFailure(IOSession session,
+                                                  RestoreDrillResult result,
+                                                  BackupNotificationChannels channels) {
+        publish(session, createRestoreDrillRequest(session, result,
+                BackupNotificationChannels.normalize(channels).failedChannels(),
+                "backupSqlFile.restoreDrill.failed",
+                "[数据库备份] 恢复验证失败",
+                "warning",
+                "/notification/restore-drill-failure"));
+    }
+
     private static NotificationRequest createRequest(IOSession session,
                                                      BackupRunResult runResult,
                                                      java.util.List<String> channels,
@@ -65,6 +89,28 @@ public class BackupNotificationUtils {
         request.setLevel(level);
         request.setRequestId(UUID.randomUUID().toString());
         request.setPayload(payload(runResult));
+        return request;
+    }
+
+    private static NotificationRequest createRestoreDrillRequest(IOSession session,
+                                                                 RestoreDrillResult result,
+                                                                 java.util.List<String> channels,
+                                                                 String eventType,
+                                                                 String title,
+                                                                 String level,
+                                                                 String template) {
+        NotificationRequest request = new NotificationRequest();
+        request.setSourcePluginId(session.getPlugin().getId());
+        request.setSourcePluginName(session.getPlugin().getShortName());
+        request.setSourceCapabilityKey(RestoreDrillCapabilityService.CAPABILITY_KEY);
+        request.setEventType(eventType);
+        request.setNotificationType("backup");
+        request.setChannels(channels);
+        request.setTitle(title);
+        request.setContent(TEMPLATE_RENDER.render(template, session.getPlugin(), restoreTemplateData(result)));
+        request.setLevel(level);
+        request.setRequestId(UUID.randomUUID().toString());
+        request.setPayload(restorePayload(result));
         return request;
     }
 
@@ -101,6 +147,27 @@ public class BackupNotificationUtils {
         map.put("filesCount", runResult == null ? 0 : runResult.getFilesCount());
         map.put("newFile", runResult != null && runResult.isNewFile());
         map.put("message", runResult == null ? "" : emptyText(runResult.getMessage()));
+        return map;
+    }
+
+    private static Map<String, Object> restoreTemplateData(RestoreDrillResult result) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("fileName", escape(emptyText(result == null ? null : result.getFileName())));
+        map.put("fileSha256", escape(emptyText(result == null ? null : result.getFileSha256())));
+        map.put("restoredTableCount", result == null ? 0 : result.getRestoredTableCount());
+        map.put("restoredCoreRowCount", result == null ? 0 : result.getRestoredCoreRowCount());
+        map.put("message", escape(emptyText(result == null ? null : result.getMessage())));
+        return map;
+    }
+
+    private static Map<String, Object> restorePayload(RestoreDrillResult result) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("fileName", result == null ? "" : emptyText(result.getFileName()));
+        map.put("fileSha256", result == null ? "" : emptyText(result.getFileSha256()));
+        map.put("restoredTableCount", result == null ? 0 : result.getRestoredTableCount());
+        map.put("restoredCoreRowCount", result == null ? 0 : result.getRestoredCoreRowCount());
+        map.put("success", result != null && result.isSuccess());
+        map.put("message", result == null ? "" : emptyText(result.getMessage()));
         return map;
     }
 

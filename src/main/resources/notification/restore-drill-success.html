@@ -1,0 +1,22 @@
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.7">
+    <h2 style="margin:0 0 12px">数据库备份恢复验证通过</h2>
+    <table style="border-collapse:collapse;min-width:320px">
+        <tr>
+            <td style="padding:6px 12px 6px 0;color:#666">备份文件</td>
+            <td style="padding:6px 0;font-weight:600">${fileName}</td>
+        </tr>
+        <tr>
+            <td style="padding:6px 12px 6px 0;color:#666">SHA-256</td>
+            <td style="padding:6px 0;font-family:monospace">${fileSha256}</td>
+        </tr>
+        <tr>
+            <td style="padding:6px 12px 6px 0;color:#666">恢复表数</td>
+            <td style="padding:6px 0;font-weight:600">${restoredTableCount}</td>
+        </tr>
+        <tr>
+            <td style="padding:6px 12px 6px 0;color:#666">核心表行数</td>
+            <td style="padding:6px 0;font-weight:600">${restoredCoreRowCount}</td>
+        </tr>
+    </table>
+    <p style="white-space:pre-wrap;margin-top:12px">${message}</p>
+</div>
