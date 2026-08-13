@@ -206,7 +206,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       const { data: res } = await axios.post<StandardResponse<any>>("backupNow");
       hideLoading();
       if (res && res.success) {
-        message.success("手动备份完成，文件已生成！");
+        message.success("备份完成，文件已生成");
         refreshPage(true);
       } else {
         message.error(res.message || "手动备份执行失败");
@@ -214,7 +214,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
     } catch (e) {
       hideLoading();
       console.error(e);
-      message.error("手动备份请求异常");
+      message.error("备份请求失败，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -443,7 +443,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>密码防护状态</Typography.Text>
             <div style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>
               {data.config.backupPassword ? (
-                <Text type="success"><CheckCircleOutlined /> 强密码加密</Text>
+                <Text type="success"><CheckCircleOutlined /> 已启用加密</Text>
               ) : (
                 <Text type="warning"><InfoCircleOutlined /> 未启用加密</Text>
               )}
@@ -496,7 +496,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
                 loading={loading}
                 scroll={{ x: 800 }}
                 pagination={{ pageSize: 10, showSizeChanger: true }}
-                locale={{ emptyText: "当前暂无定时备份文件，可点击右上角“立即备份”执行第一次归档" }}
+                locale={{ emptyText: "暂无备份文件，可点击“立即备份”生成文件" }}
               />
             )
           },
@@ -517,7 +517,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
                 loading={loading}
                 scroll={{ x: 800 }}
                 pagination={{ pageSize: 10 }}
-                locale={{ emptyText: "暂无备份执行日志，定时调度触发后将自动添加日志记录" }}
+                locale={{ emptyText: "暂无执行记录，备份任务运行后会在这里显示结果" }}
               />
             )
           }
@@ -585,10 +585,10 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
 
             <Form.Item
               name="backupFilePath"
-              label="存储绝对物理路径"
-              tooltip="本地宿主机上的备份文件目录，留空时写入插件根目录下的 /sql/ 文件夹"
+              label="本地备份目录"
+              tooltip="用于保存备份文件的服务器目录，留空时保存到插件目录下的 sql 文件夹"
             >
-              <Input placeholder="输入物理文件绝对路径（确保具备读写运行权限）" />
+              <Input placeholder="请输入 ZrLog 进程可以读写的目录" />
             </Form.Item>
 
             <Form.Item
