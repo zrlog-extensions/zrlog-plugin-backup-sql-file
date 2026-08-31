@@ -11,7 +11,7 @@
     <properties>
         <outputDirectory>/Users/xiaochun/zrlog-plugin/</outputDirectory>
         <imageName>backup-sql-file</imageName>
-        <native.maven.plugin.version>0.10.2</native.maven.plugin.version>
+        <native.maven.plugin.version>1.1.11</native.maven.plugin.version>
         <native.image.mainClass>com.zrlog.plugin.backup.Application</native.image.mainClass>
         <native.image.agentMainClass>com.zrlog.plugin.backup.GraalvmAgentApplication</native.image.agentMainClass>
         <maven.compiler.source>${java.version}</maven.compiler.source>
