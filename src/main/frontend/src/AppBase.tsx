@@ -1,36 +1,34 @@
 import React, { useMemo, useState } from "react";
-import { 
+import {
   Alert,
-  Table, 
-  Button, 
-  Tabs, 
-  Modal, 
-  Form, 
-  Select, 
-  Input, 
-  Badge, 
-  Card, 
-  Space, 
+  Button,
+  Tabs,
+  Modal,
+  Form,
+  Select,
+  Badge,
+  Card,
+  Space,
   Tooltip,
-  Typography,
   Flex,
   Row,
   Col,
   Grid,
   theme,
-  App
 } from "antd";
-import { 
-  DatabaseOutlined, 
-  DownloadOutlined, 
-  SettingOutlined, 
-  ReloadOutlined, 
-  HistoryOutlined, 
-  FileZipOutlined, 
-  CloudDownloadOutlined,
-  CheckCircleOutlined,
-  InfoCircleOutlined
-} from "@ant-design/icons";
+import {useUiApp} from "@zrlog/ui/feedback";
+import Table from "@zrlog/ui/antd/Table";
+import Input from "@zrlog/ui/antd/Input";
+import Typography from "@zrlog/ui/antd/Typography";
+import DatabaseIcon from "@zrlog/ui/icons/database";
+import DownloadIcon from "@zrlog/ui/icons/download";
+import SettingsIcon from "@zrlog/ui/icons/settings";
+import RefreshIcon from "@zrlog/ui/icons/refresh";
+import HistoryIcon from "@zrlog/ui/icons/history";
+import ArchiveIcon from "@zrlog/ui/icons/archive";
+import CloudDownloadIcon from "@zrlog/ui/icons/cloud-download";
+import SuccessIcon from "@zrlog/ui/icons/success";
+import InfoIcon from "@zrlog/ui/icons/info";
 import axios from "axios";
 import {
   BackupInfoResponse,
@@ -59,7 +57,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
   const screens = Grid.useBreakpoint();
   const isPhone = Boolean(screens.xs && !screens.sm);
   const isCompact = !screens.lg;
-  const { message } = App.useApp();
+  const { message } = useUiApp();
 
   const [loading, setLoading] = useState<boolean>(false);
   const [settingsVisible, setSettingsVisible] = useState<boolean>(false);
@@ -246,7 +244,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       render: (text: string) => (
         <Button 
           type="link" 
-          icon={<DownloadOutlined />} 
+          icon={<DownloadIcon />}
           style={{ padding: 0, height: "auto" }}
           onClick={() => downloadBackupFile(text)}
         >
@@ -276,7 +274,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           <Button 
             type="text" 
             shape="circle" 
-            icon={<DownloadOutlined />} 
+            icon={<DownloadIcon />}
             onClick={() => downloadBackupFile(record.fileName)}
           />
         </Tooltip>
@@ -352,7 +350,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       >
         <div>
           <Flex align="center" gap={8}>
-            <DatabaseOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
+            <DatabaseIcon style={{ fontSize: 24, color: token.colorPrimary }} />
             <Title level={2} style={{ margin: 0, fontSize: isPhone ? 20 : 24, lineHeight: "32px", fontWeight: 650 }}>
               数据库备份设置
             </Title>
@@ -362,8 +360,8 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
           </Text>
         </div>
         <Space wrap style={{ width: isPhone ? "100%" : undefined }}>
-          <Button icon={<ReloadOutlined/>} onClick={() => refreshPage(false)} loading={loading} style={isPhone ? {flex: 1} : undefined}>刷新</Button>
-          <Button icon={<SettingOutlined/>} onClick={() => {
+          <Button icon={<RefreshIcon/>} onClick={() => refreshPage(false)} loading={loading} style={isPhone ? {flex: 1} : undefined}>刷新</Button>
+          <Button icon={<SettingsIcon/>} onClick={() => {
             const channels = notificationChannels || defaultNotificationChannels();
             form.setFieldsValue({
               backupPassword: data.config.backupPassword,
@@ -374,10 +372,10 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             setSettingsVisible(true);
             loadNotificationChannels();
           }} style={isPhone ? {flex: 1} : undefined}>备份设置</Button>
-          <Button type="dashed" icon={<CloudDownloadOutlined/>} onClick={handleBackupNow} loading={loading} style={isPhone ? {flex: 1} : undefined}>
+          <Button type="dashed" icon={<CloudDownloadIcon/>} onClick={handleBackupNow} loading={loading} style={isPhone ? {flex: 1} : undefined}>
             立即备份
           </Button>
-          <Button type="primary" icon={<DownloadOutlined/>} onClick={handleExportSql} style={isPhone ? {flex: 1} : undefined}>
+          <Button type="primary" icon={<DownloadIcon/>} onClick={handleExportSql} style={isPhone ? {flex: 1} : undefined}>
             导出SQL文件
           </Button>
         </Space>
@@ -390,7 +388,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             key: "database",
             label: (
               <span>
-                <DatabaseOutlined />
+                <DatabaseIcon />
                 数据库备份
               </span>
             ),
@@ -443,9 +441,9 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>密码防护状态</Typography.Text>
             <div style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}>
               {data.config.backupPassword ? (
-                <Text type="success"><CheckCircleOutlined /> 已启用加密</Text>
+                <Text type="success"><SuccessIcon /> 已启用加密</Text>
               ) : (
-                <Text type="warning"><InfoCircleOutlined /> 未启用加密</Text>
+                <Text type="warning"><InfoIcon /> 未启用加密</Text>
               )}
             </div>
           </Card>
@@ -483,7 +481,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             key: "1",
             label: (
               <span>
-                <FileZipOutlined />
+                <ArchiveIcon />
                 已存归档文件
               </span>
             ),
@@ -504,7 +502,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             key: "2",
             label: (
               <span>
-                <HistoryOutlined />
+                <HistoryIcon />
                 执行历史记录
               </span>
             ),
@@ -530,7 +528,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
             key: "siteExport",
             label: (
               <span>
-                <FileZipOutlined />
+                <ArchiveIcon />
                 全站导出
               </span>
             ),
@@ -545,7 +543,7 @@ const AppBase: React.FC<AppBaseProps> = ({ data, setResponse }) => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: `1px solid ${token.colorBorderSecondary}`, paddingBottom: "12px", width: "100%" }}>
-            <SettingOutlined style={{ color: token.colorPrimary }} />
+            <SettingsIcon style={{ color: token.colorPrimary }} />
             <span>配置备份参数</span>
           </div>
         }

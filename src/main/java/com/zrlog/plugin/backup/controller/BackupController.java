@@ -1,6 +1,7 @@
 package com.zrlog.plugin.backup.controller;
 
 import com.google.gson.Gson;
+import com.zrlog.plugin.data.codec.PluginAppearance;
 import com.zrlog.plugin.IOSession;
 import com.zrlog.plugin.backup.Application;
 import com.zrlog.plugin.backup.model.BackupApiResponse;
@@ -305,6 +306,7 @@ public class BackupController {
 
         BackupPageData data = new BackupPageData();
         data.setDark(requestInfo.isDarkMode());
+        data.setAppearance(PluginAppearance.from(requestInfo));
         data.setColorPrimary(requestInfo.getAdminColorPrimary());
         data.setPlugin(session.getPlugin());
         data.setConfig(config);

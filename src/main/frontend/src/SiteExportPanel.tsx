@@ -1,4 +1,7 @@
-import {DownloadOutlined, FileZipOutlined, ReloadOutlined, UploadOutlined} from "@ant-design/icons";
+import DownloadIcon from "@zrlog/ui/icons/download";
+import ArchiveIcon from "@zrlog/ui/icons/archive";
+import RefreshIcon from "@zrlog/ui/icons/refresh";
+import CloudUploadIcon from "@zrlog/ui/icons/cloud-upload";
 import {
   Alert,
   Button,
@@ -10,12 +13,12 @@ import {
   Row,
   Space,
   Statistic,
-  Table,
-  Tag,
-  Typography,
   Upload,
-  message,
 } from "antd";
+import {useUiMessage} from "@zrlog/ui/feedback";
+import Table from "@zrlog/ui/antd/Table";
+import Tag from "@zrlog/ui/antd/Tag";
+import Typography from "@zrlog/ui/antd/Typography";
 import type {ColumnsType} from "antd/es/table";
 import axios from "axios";
 import {FunctionComponent, useMemo, useState} from "react";
@@ -182,7 +185,7 @@ const SiteExportPanel: FunctionComponent<SiteExportPanelProps> = ({initialPrevie
   const [importPreview, setImportPreview] = useState<SiteImportPrecheckData>();
   const [refreshing, setRefreshing] = useState(false);
   const [prechecking, setPrechecking] = useState(false);
-  const [messageApi, messageContextHolder] = message.useMessage({maxCount: 3});
+  const [messageApi, messageContextHolder] = useUiMessage({maxCount: 3});
 
   const disabledOptionKeys = useMemo(() => new Set<keyof SiteExportOptions>(["includePluginRuntimeState"]), []);
 
@@ -401,16 +404,16 @@ const SiteExportPanel: FunctionComponent<SiteExportPanelProps> = ({initialPrevie
         <Card
           title={
             <Space>
-              <FileZipOutlined/>
+              <ArchiveIcon/>
               <span>全站导出</span>
             </Space>
           }
           extra={
             <Space wrap>
-              <Button icon={<ReloadOutlined/>} loading={refreshing} onClick={() => void refreshPreview()}>
+              <Button icon={<RefreshIcon/>} loading={refreshing} onClick={() => void refreshPreview()}>
                 刷新预览
               </Button>
-              <Button type="primary" icon={<DownloadOutlined/>} onClick={downloadPackage}>
+              <Button type="primary" icon={<DownloadIcon/>} onClick={downloadPackage}>
                 下载 zip
               </Button>
             </Space>
@@ -430,7 +433,7 @@ const SiteExportPanel: FunctionComponent<SiteExportPanelProps> = ({initialPrevie
         <Card
           title={
             <Space>
-              <UploadOutlined/>
+              <CloudUploadIcon/>
               <span>导入前预检</span>
             </Space>
           }
@@ -462,12 +465,12 @@ const SiteExportPanel: FunctionComponent<SiteExportPanelProps> = ({initialPrevie
                   }
                 }}
               >
-                <Button icon={<UploadOutlined/>} loading={prechecking}>
+                <Button icon={<CloudUploadIcon/>} loading={prechecking}>
                   选择 zip 预检
                 </Button>
               </Upload>
               {importPreview ? (
-                <Button icon={<DownloadOutlined/>} onClick={downloadImportPrecheckReport}>
+                <Button icon={<DownloadIcon/>} onClick={downloadImportPrecheckReport}>
                   下载预检报告
                 </Button>
               ) : null}

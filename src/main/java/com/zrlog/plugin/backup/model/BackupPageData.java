@@ -1,5 +1,6 @@
 package com.zrlog.plugin.backup.model;
 
+import com.zrlog.plugin.data.codec.PluginAppearance;
 import com.zrlog.plugin.message.Plugin;
 
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.List;
 public class BackupPageData {
 
     private boolean dark;
+    private PluginAppearance appearance;
     private String colorPrimary;
     private Plugin plugin;
     private BackupConfig config;
@@ -18,6 +20,14 @@ public class BackupPageData {
     private BackupNotificationChannels notificationChannels;
     private SiteExportPreviewResponse siteExport;
     private String siteExportError;
+
+    public PluginAppearance getAppearance() {
+        return appearance;
+    }
+
+    public void setAppearance(PluginAppearance appearance) {
+        this.appearance = appearance;
+    }
 
     public boolean isDark() {
         return dark;
